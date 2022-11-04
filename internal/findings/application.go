@@ -187,7 +187,7 @@ func (a App) enrich(finding ocsf.SecurityFinding, data lacework.Data) {
 		if len(data.EntityMap.Container) > 0 {
 			image := fmt.Sprintf("%s:%s", data.EntityMap.Container[0].IMAGEREPO, data.EntityMap.Container[0].IMAGETAG)
 			id = image
-		} else {
+		} else if len(data.EntityMap.Machine) > 0 {
 			id = data.EntityMap.Machine[0].Hostname
 		}
 		if len(data.EntityMap.Container) > 0 {
@@ -254,7 +254,7 @@ func (a App) enrich(finding ocsf.SecurityFinding, data lacework.Data) {
 			}
 		}
 		if a.config.Telemetry {
-			honeycomb.SendHoneycombEvent(a.config.Instance, "cloudtrail_event_type_not_found", "", a.config.Version, string(t), "otherDetails")
+			honeycomb.SendHoneycombEvent(a.config.Instance, "cloudtrail_event_type_not_found", "", a.config.Version, string(t), "otherDetails", a.config.HoneyDataset, a.config.HoneyKey)
 		}
 	}
 	finding.ResourcesArray = append(finding.ResourcesArray, ocsf.Resource{

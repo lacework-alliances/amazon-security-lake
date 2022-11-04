@@ -30,7 +30,7 @@ Parameters:
   MooseS3BucketName:
     Type: String
     Default: moose
-    Description: "Moose S3 bucket to create."
+    Description: "Moose S3 bucket to use."
     MinLength: '1'
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9_-]*'
     ConstraintDescription: "Invalid S3 bucket name."
@@ -65,11 +65,6 @@ Parameters:
     ConstraintDescription: "Resource prefix name may contain alphanumeric characters and dashes only."
     Default: "Lacework-Moose"
 Resources:
-  MooseS3Bucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Ref 'MooseS3BucketName'
-
   LambdaZipsBucket:
     Type: AWS::S3::Bucket
 
@@ -79,7 +74,7 @@ Resources:
       ServiceToken: !GetAtt 'CopyZipsFunction.Arn'
       DestBucket: !Ref 'LambdaZipsBucket'
       SourceBucket: 'lacework-alliances'
-      Prefix: 'moose'
+      Prefix: 'lacework-moose'
       Objects:
         - '/lambda/moose.zip'
 
@@ -106,14 +101,14 @@ Resources:
                   - s3:GetObject
                   - s3:GetObjectTagging
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::lacework-alliances/moose*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::lacework-alliances/lacework-moose*'
               - Effect: Allow
                 Action:
                   - s3:PutObject
                   - s3:DeleteObject
                   - s3:PutObjectTagging
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::${LambdaZipsBucket}/moose*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${LambdaZipsBucket}/lacework-moose*'
 
   CopyZipsFunction:
     Type: AWS::Lambda::Function
@@ -180,7 +175,7 @@ Resources:
     Properties:
       Code:
         S3Bucket: !Ref LambdaZipsBucket
-        S3Key: !Join ['', ['moose', '/lambda/moose.zip']]
+        S3Key: !Join ['', ['lacework-moose', '/lambda/moose.zip']]
       Handler: setup
       Runtime: go1.x
       Environment:
@@ -234,7 +229,7 @@ Resources:
                 Action:
                   - s3:PutObject
                 Resource:
-                  - !Ref MooseS3Bucket
+                  - !Sub 'arn:aws:s3:::${MooseS3BucketName}'
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole'
 
@@ -246,7 +241,7 @@ Resources:
     Properties:
       Code:
         S3Bucket: !Ref LambdaZipsBucket
-        S3Key: !Join ['', ['moose', '/lambda/moose.zip']]
+        S3Key: !Join ['', ['lacework-moose', '/lambda/moose.zip']]
       Handler: main
       MemorySize: 256
       Timeout: 30

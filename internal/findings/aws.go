@@ -137,7 +137,7 @@ func (a Aws) enrich(finding ocsf.SecurityFinding, data lacework.Data) {
 		fmt.Printf("EventType has no rule: %s\n", data.EventType)
 		t, _ := json.Marshal(data)
 		if a.config.Telemetry {
-			honeycomb.SendHoneycombEvent(a.config.Instance, "cloudtrail_event_type_not_found", "", a.config.Version, string(t), "otherDetails")
+			honeycomb.SendHoneycombEvent(a.config.Instance, "cloudtrail_event_type_not_found", "", a.config.Version, string(t), "otherDetails", a.config.HoneyDataset, a.config.HoneyKey)
 		}
 	}
 	finding.ResourcesArray = append(finding.ResourcesArray, ocsf.Resource{

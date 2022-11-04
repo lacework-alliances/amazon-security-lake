@@ -7,33 +7,25 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/aws-lambda-go/cfn"
-	"github.com/aws/aws-lambda-go/events"
 	lam "github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/jefferyfry/funclog"
-	"github.com/lacework-alliances/aws-moose-integration/internal/findings"
 	"github.com/lacework-alliances/aws-moose-integration/internal/honeycomb"
-	"github.com/lacework-alliances/aws-moose-integration/pkg/lacework"
-	"github.com/lacework-alliances/aws-moose-integration/pkg/ocsf"
-	"github.com/xitongsys/parquet-go-source/s3"
-	"github.com/xitongsys/parquet-go/writer"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"os"
 	"strings"
-	"time"
+)
+
+const (
+	SBUILD    = "$BUILD"
+	SHONEYKEY = "$HONEYKEY"
+	SDATASET  = "$DATASET"
 )
 
 var (
-	defaultAccount string
-	instance       string
-	version        string
-	telemetry      bool
-	mooseBucket    string
-	LogI           = funclog.NewInfoLogger("INFO: ")
-	LogW           = funclog.NewInfoLogger("WARN: ")
-	LogE           = funclog.NewErrorLogger("ERROR: ")
+	LogISetup = funclog.NewInfoLogger("INFO: ")
+	LogWSetup = funclog.NewInfoLogger("WARN: ")
+	LogESetup = funclog.NewErrorLogger("ERROR: ")
 )
 
 type AccessTokenRequestPayload struct {
@@ -118,105 +110,11 @@ type SearchAlertRuleResponsePayload struct {
 	} `json:"data"`
 }
 
-func init() {
-	defaultAccount = os.Getenv("DEFAULT_AWS_ACCOUNT")
-	if defaultAccount == "" {
-		fmt.Println("Please set the environment variable DEFAULT_AWS_ACCOUNT")
-	}
-	instance = os.Getenv("LACEWORK_INSTANCE")
-	if instance == "" {
-		fmt.Println("Please set the environment variable LACEWORK_INSTANCE")
-	}
-	if disabled := os.Getenv("LW_DISABLE_TELEMETRY"); disabled != "" {
-		telemetry = false
-	} else {
-		telemetry = true
-	}
-	mooseBucket = os.Getenv("moose_s3_bucket_name")
-	if instance == "" {
-		fmt.Println("Please set the environment variable LACEWORK_INSTANCE")
-	}
-}
-
-func main() {
-	cfg := lacework.Config{
-		DefaultAccount: defaultAccount,
-		Instance:       instance,
-		EventMap:       findings.InitMap(),
-		Region:         os.Getenv("AWS_REGION"),
-		Telemetry:      telemetry,
-		Version:        version,
-	}
-	ctx := context.WithValue(context.Background(), "config", cfg)
-	lam.StartWithOptions(handler, lam.WithContext(ctx))
-}
-
-func handler(ctx context.Context, e events.SQSEvent) {
-	var event lacework.LaceworkEvent
-
-	for _, message := range e.Records {
-		LogI.Printf("%s \n", message.Body)
-
-		err := json.Unmarshal([]byte(message.Body), &event)
-		if err != nil {
-			if telemetry {
-				honeycomb.SendHoneycombEvent(instance, "error", "", version, err.Error(), "record")
-			}
-			LogE.Printf("error while unmarshalling event message: %v\n", err)
-		}
-
-		f := findings.EventToOCSF(ctx, event)
-		if len(f) > 0 {
-			writeFindingToS3(ctx, f)
-			if err != nil {
-				if telemetry {
-					honeycomb.SendHoneycombEvent(instance, "error", "", version, err.Error(), "BatchImportFindings")
-				}
-				LogE.Println("error while importing batch: ", err)
-			}
-		}
-	}
-}
-
-func writeFindingToS3(ctx context.Context, findings []*ocsf.SecurityFinding) {
-	bucket := mooseBucket
-	lc, _ := lambdacontext.FromContext(ctx)
-	region := strings.Split(lc.InvokedFunctionArn, ":")[3]
-	account := strings.Split(lc.InvokedFunctionArn, ":")[4]
-	t := time.Now()
-	key := fmt.Sprintf("region=%s/AWS_account=%s/eventhour=%s", region, account, t.Format("2006010215"))
-	// create new S3 file writer
-	fw, err := s3.NewS3FileWriter(ctx, bucket, key, "bucket-owner-full-control", nil)
-	if err != nil {
-		log.Println("Can't open file", err)
-		return
-	}
-	// create new parquet file writer
-	pw, err := writer.NewParquetWriter(fw, new(ocsf.SecurityFinding), 4)
-
-	for _, finding := range findings {
-		if err = pw.Write(finding); err != nil {
-			LogW.Println("Write error", err)
-		}
-	}
-	// write parquet file footer
-	if err = pw.WriteStop(); err != nil {
-		LogW.Println("WriteStop err", err)
-	}
-
-	err = fw.Close()
-	if err != nil {
-		LogW.Println("Error closing S3 file writer")
-	}
-	LogI.Println("Write Finished")
-
-}
-
 /*
 *
 Setup Functions
 */
-func setup() {
+func main() {
 	lam.Start(cfn.LambdaWrap(handlerSetup))
 }
 
@@ -226,44 +124,44 @@ func handlerSetup(ctx context.Context, event cfn.Event) (physicalResourceID stri
 	} else if event.RequestType == cfn.RequestDelete {
 		return delete(ctx, event)
 	} else {
-		LogW.Println("CloudFormation event not supported: ", event.RequestType)
+		LogWSetup.Println("CloudFormation event not supported: ", event.RequestType)
 		return "", nil, nil
 	}
 }
 
 func create(ctx context.Context, event cfn.Event) (physicalResourceID string, data map[string]interface{}, err error) {
-	LogI.Printf("CloudFormation event received: %+v \n", event)
+	LogISetup.Printf("CloudFormation event received: %+v \n", event)
 	laceworkUrl := os.Getenv("lacework_url")
 	subAccountName := os.Getenv("lacework_sub_account_name")
 	accessKeyId := os.Getenv("lacework_access_key_id")
 	secretKey := os.Getenv("lacework_secret_key")
 	eventBusArn := os.Getenv("event_bus_arn")
 	alertChannelName := os.Getenv("alert_channel_name")
-	honeycomb.SendHoneycombEvent(strings.Split(laceworkUrl, ".")[0], "create started", subAccountName, "{}", "{}", "{}")
+	honeycomb.SendHoneycombEvent(strings.Split(laceworkUrl, ".")[0], "create started", subAccountName, SBUILD, "{}", "{}", SDATASET, SHONEYKEY)
 
 	valid := true
 
 	if laceworkUrl == "" {
-		LogE.Println("laceworkUrl was not set.")
+		LogESetup.Println("laceworkUrl was not set.")
 		valid = false
 	}
 
 	if subAccountName == "" {
-		LogW.Println("laceworkSubAccountName was not set.")
+		LogWSetup.Println("laceworkSubAccountName was not set.")
 	}
 
 	if accessKeyId == "" {
-		LogE.Println("laceworkAccessKeyId was not set.")
+		LogESetup.Println("laceworkAccessKeyId was not set.")
 		valid = false
 	}
 
 	if secretKey == "" {
-		LogE.Println("laceworkSecretKey was not set.")
+		LogESetup.Println("laceworkSecretKey was not set.")
 		valid = false
 	}
 
 	if eventBusArn == "" {
-		LogE.Println("eventBusArn was not set.")
+		LogESetup.Println("eventBusArn was not set.")
 		valid = false
 	}
 
@@ -271,53 +169,53 @@ func create(ctx context.Context, event cfn.Event) (physicalResourceID string, da
 		return event.PhysicalResourceID, nil, errors.New("unable to run setup due to missing required environment variables")
 	}
 
-	LogI.Println("Getting access token.")
+	LogISetup.Println("Getting access token.")
 	if accessToken, err := createAccessToken(laceworkUrl, accessKeyId, secretKey); err == nil {
-		LogI.Println("Creating Alert Channel.")
+		LogISetup.Println("Creating Alert Channel.")
 		if intgGuid, err := createAlertChannel(alertChannelName, eventBusArn, laceworkUrl, accessToken, subAccountName); err == nil {
-			LogI.Println("Creating Alert Rule.")
+			LogISetup.Println("Creating Alert Rule.")
 			if err := createAlertRule(alertChannelName, intgGuid, laceworkUrl, accessToken, subAccountName); err != nil {
 				return event.PhysicalResourceID, nil, err
 			}
 		} else {
 			errMsg := fmt.Sprintf("Failed creating alert channel: %v", err)
-			LogE.Println(errMsg)
+			LogESetup.Println(errMsg)
 			return event.PhysicalResourceID, nil, err
 		}
 	} else {
 		return event.PhysicalResourceID, nil, err
 	}
 
-	honeycomb.SendHoneycombEvent(strings.Split(laceworkUrl, ".")[0], "create completed", subAccountName, "{}", "{}", "{}")
+	honeycomb.SendHoneycombEvent(strings.Split(laceworkUrl, ".")[0], "create completed", subAccountName, SBUILD, "{}", "{}", SDATASET, SHONEYKEY)
 	return event.PhysicalResourceID, nil, nil
 }
 
 func delete(ctx context.Context, event cfn.Event) (physicalResourceID string, data map[string]interface{}, err error) {
-	LogI.Printf("CloudFormation event received: %+v \n", event)
+	LogISetup.Printf("CloudFormation event received: %+v \n", event)
 	laceworkUrl := os.Getenv("lacework_url")
 	subAccountName := os.Getenv("lacework_sub_account_name")
 	accessKeyId := os.Getenv("lacework_access_key_id")
 	secretKey := os.Getenv("lacework_secret_key")
 	alertChannelName := os.Getenv("alert_channel_name")
-	honeycomb.SendHoneycombEvent(strings.Split(laceworkUrl, ".")[0], "delete started", subAccountName, "{}", "{}", "{}")
+	honeycomb.SendHoneycombEvent(strings.Split(laceworkUrl, ".")[0], "delete started", subAccountName, SBUILD, "{}", "{}", SDATASET, SHONEYKEY)
 
 	if accessToken, err := createAccessToken(laceworkUrl, accessKeyId, secretKey); err == nil {
 		if intgGuid, err := searchAlertChannels(alertChannelName, laceworkUrl, accessToken, subAccountName); err == nil {
 			deleteAlertChannel(intgGuid, laceworkUrl, accessToken, subAccountName)
 		} else {
-			LogW.Printf("Unable to search: %v", err)
+			LogWSetup.Printf("Unable to search: %v", err)
 		}
 
 		if mcGuid, err := searchAlertRules(alertChannelName, laceworkUrl, accessToken, subAccountName); err == nil {
 			deleteAlertRule(mcGuid, laceworkUrl, accessToken, subAccountName)
 		} else {
-			LogW.Printf("Unable to search: %v", err)
+			LogWSetup.Printf("Unable to search: %v", err)
 		}
 	} else {
-		LogW.Println("Did not get access token in order to delete alert channel and alert rule.")
+		LogWSetup.Println("Did not get access token in order to delete alert channel and alert rule.")
 	}
 
-	honeycomb.SendHoneycombEvent(strings.Split(laceworkUrl, ".")[0], "delete completed", subAccountName, "{}", "{}", "{}")
+	honeycomb.SendHoneycombEvent(strings.Split(laceworkUrl, ".")[0], "delete completed", subAccountName, SBUILD, "{}", "{}", SDATASET, SHONEYKEY)
 
 	return event.PhysicalResourceID, nil, nil
 }
@@ -341,9 +239,9 @@ func createAccessToken(laceworkUrl string, accessKeyId string, secretKey string)
 			defer resp.Body.Close()
 			respData := AccessTokenResponsePayload{}
 			if err := json.NewDecoder(resp.Body).Decode(&respData); err == nil {
-				LogI.Printf("AccessTokenResponsePayload: %+v", respData)
+				LogISetup.Printf("AccessTokenResponsePayload: %+v", respData)
 			} else {
-				LogE.Printf("Unable to get response body: %v", err)
+				LogESetup.Printf("Unable to get response body: %v", err)
 				return "", err
 			}
 			if resp.StatusCode == http.StatusCreated {
@@ -377,12 +275,12 @@ func createAlertChannel(name string, eventBusArn string, laceworkUrl string, acc
 				if err := json.NewDecoder(resp.Body).Decode(&respData); err == nil {
 					respDump, err := httputil.DumpResponse(resp, true)
 					if err != nil {
-						LogW.Println(err)
+						LogWSetup.Println(err)
 					}
-					LogI.Printf("Received response: %s", string(respDump))
+					LogISetup.Printf("Received response: %s", string(respDump))
 					return respData.Data.IntgGuid, nil
 				} else {
-					LogE.Printf("Unable to get response body: %v", err)
+					LogESetup.Printf("Unable to get response body: %v", err)
 					return "", err
 				}
 			} else {
@@ -432,17 +330,17 @@ func searchAlertChannels(name string, laceworkUrl string, accessToken string, su
 				if err := json.NewDecoder(resp.Body).Decode(&respData); err == nil {
 					respDump, err := httputil.DumpResponse(resp, true)
 					if err != nil {
-						LogW.Println(err)
+						LogWSetup.Println(err)
 					}
-					LogI.Printf("Received response: %s", string(respDump))
+					LogISetup.Printf("Received response: %s", string(respDump))
 					if len(respData.Data) == 0 {
-						LogW.Println("No results returned.")
+						LogWSetup.Println("No results returned.")
 						return "", err
 					} else {
 						return respData.Data[0].IntgGuid, nil
 					}
 				} else {
-					LogE.Printf("Unable to get response body: %v", err)
+					LogESetup.Printf("Unable to get response body: %v", err)
 					return "", err
 				}
 			} else {
@@ -475,9 +373,9 @@ func createAlertRule(name string, intgGuid string, laceworkUrl string, accessTok
 			if resp.StatusCode == http.StatusCreated {
 				respDump, err := httputil.DumpResponse(resp, true)
 				if err != nil {
-					LogW.Println(err)
+					LogWSetup.Println(err)
 				}
-				LogI.Printf("Received response: %s", string(respDump))
+				LogISetup.Printf("Received response: %s", string(respDump))
 				return nil
 			} else {
 				return errors.New(fmt.Sprintf("Failed sending alert rule request. Response status is %d", resp.StatusCode))
@@ -525,17 +423,17 @@ func searchAlertRules(name string, laceworkUrl string, accessToken string, subAc
 				if err := json.NewDecoder(resp.Body).Decode(&respData); err == nil {
 					respDump, err := httputil.DumpResponse(resp, true)
 					if err != nil {
-						LogW.Println(err)
+						LogWSetup.Println(err)
 					}
-					LogI.Printf("Received response: %s", string(respDump))
+					LogISetup.Printf("Received response: %s", string(respDump))
 					if len(respData.Data) == 0 {
-						LogW.Println("No results returned.")
+						LogWSetup.Println("No results returned.")
 						return "", err
 					} else {
 						return respData.Data[0].McGuid, nil
 					}
 				} else {
-					LogE.Printf("Unable to get response body: %v", err)
+					LogESetup.Printf("Unable to get response body: %v", err)
 					return "", err
 				}
 			} else {
@@ -553,7 +451,7 @@ func sendApiPostRequest(laceworkUrl string, api string, accessToken string, requ
 	request, err := http.NewRequest(http.MethodPost, "https://"+laceworkUrl+api, bytes.NewBuffer(requestPayload))
 
 	if err != nil {
-		LogE.Printf("Error creating API post request: %v %v\n", err, requestPayload)
+		LogESetup.Printf("Error creating API post request: %v %v\n", err, requestPayload)
 		return nil, err
 	}
 
@@ -566,9 +464,9 @@ func sendApiPostRequest(laceworkUrl string, api string, accessToken string, requ
 
 	requestDump, err := httputil.DumpRequest(request, true)
 	if err != nil {
-		LogW.Println(err)
+		LogWSetup.Println(err)
 	}
-	LogI.Printf("Sending request: %s", string(requestDump))
+	LogISetup.Printf("Sending request: %s", string(requestDump))
 
 	return http.DefaultClient.Do(request)
 }
@@ -577,7 +475,7 @@ func sendApiDeleteRequest(laceworkUrl string, api string, accessToken string, su
 	request, err := http.NewRequest(http.MethodDelete, "https://"+laceworkUrl+api, nil)
 
 	if err != nil {
-		LogE.Printf("Error creating API delete request: %v\n", err)
+		LogESetup.Printf("Error creating API delete request: %v\n", err)
 		return nil, err
 	}
 
@@ -590,9 +488,9 @@ func sendApiDeleteRequest(laceworkUrl string, api string, accessToken string, su
 
 	requestDump, err := httputil.DumpRequest(request, true)
 	if err != nil {
-		LogW.Println(err)
+		LogWSetup.Println(err)
 	}
-	LogI.Printf("Sending request: %s", string(requestDump))
+	LogISetup.Printf("Sending request: %s", string(requestDump))
 
 	return http.DefaultClient.Do(request)
 }

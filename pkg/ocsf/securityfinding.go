@@ -45,8 +45,8 @@ type SecurityFinding struct { //see https://schema.ocsf.io/classes/security_find
 	StatusID           int32                  `json:"status_id,omitempty" parquet:"name=status_id, type=INT32"`             //recommended
 	TimezoneOffset     int32                  `json:"timezone_offset,omitempty" parquet:"name=timezone_offset, type=INT32"` //recommended
 	TypeID             int32                  `json:"type_uid" parquet:"name=type_uid, type=INT32"`                         //required             //required
-	TypeName           string                 `json:"type_name,omitempty" parquet:"name=state, type=BYTE_ARRAY, convertedtype=UTF8"`
-	UnmappedData       map[string]interface{} `json:"unmapped,omitempty" parquet:"name=unmapped, type=MAP, keytype=BYTE_ARRAY, keyconvertedtype=UTF8"`
+	TypeName           string                 `json:"type_name,omitempty" parquet:"name=type_name, type=BYTE_ARRAY, convertedtype=UTF8"`
+	UnmappedData       string                 `json:"unmapped,omitempty" parquet:"name=unmapped, type=BYTE_ARRAY, convertedtype=UTF8"`
 	Vulnerabilities    []VulnerabilityDetails `json:"vulnerabilities,omitempty" parquet:"name=vulnerabilities type=LIST"`
 }
 
@@ -128,23 +128,23 @@ type Observable struct { //see https://schema.ocsf.io/objects/observable
 }
 
 type Process struct { //see https://schema.ocsf.io/objects/process
-	CommandLine        string                 `json:"cmd_line" parquet:"name=cmd_line, type=BYTE_ARRAY, convertedtype=UTF8"`
-	CreatedTime        time.Time              `json:"created_time,omitempty" parquet:"name=created_time, type=TIMESTAMP_MILLIS"`
-	ExtendedAttributes map[string]interface{} `json:"xattributes,omitempty" parquet:"name=xattributes, type=MAP, keytype=BYTE_ARRAY, keyconvertedtype=UTF8"`
-	File               File                   `json:"file,omitempty" parquet:"name=file"`
-	Integrity          string                 `json:"integrity,omitempty" parquet:"name=integrity, type=BYTE_ARRAY, convertedtype=UTF8"`
-	IntegrityLevel     int32                  `json:"integrity_id,omitempty" parquet:"name=integrity_id, type=INT32"`
-	Lineage            []string               `json:"lineage,omitempty" parquet:"name=lineage, type=LIST, valuetype=BYTE_ARRAY, valueconvertedtype=UTF8"`
-	LoadedModules      []string               `json:"loaded_modules,omitempty" parquet:"name=loaded_modules, type=LIST, valuetype=BYTE_ARRAY, valueconvertedtype=UTF8"`
-	Name               string                 `json:"name,omitempty" parquet:"name=name, type=BYTE_ARRAY, convertedtype=UTF8"`
-	ParentProcess      *Process               `json:"parent_process,omitempty" parquet:"name=parent_process type=INT64"`
-	Path               string                 `json:"path" parquet:"name=path, type=BYTE_ARRAY, convertedtype=UTF8"`
-	ProcessID          int32                  `json:"pid" parquet:"name=pid, type=INT32"`
-	ProcessUID         int32                  `json:"uid,omitempty" parquet:"name=uid, type=INT32"`
-	RunAsUser          User                   `json:"run_as,omitempty" parquet:"name=run_as"`
-	Sandbox            string                 `json:"sandbox,omitempty" parquet:"name=sandbox, type=BYTE_ARRAY, convertedtype=UTF8"`
-	TerminatedTime     time.Time              `json:"terminated_time,omitempty" parquet:"name=terminated_time, type=TIMESTAMP_MILLIS"`
-	ThreadID           int32                  `json:"tid,omitempty" parquet:"name=tid, type=INT32"`
+	CommandLine        string    `json:"cmd_line" parquet:"name=cmd_line, type=BYTE_ARRAY, convertedtype=UTF8"`
+	CreatedTime        time.Time `json:"created_time,omitempty" parquet:"name=created_time, type=TIMESTAMP_MILLIS"`
+	ExtendedAttributes string    `json:"xattributes,omitempty" parquet:"name=xattributes, type=BYTE_ARRAY, convertedtype=UTF8"`
+	File               File      `json:"file,omitempty" parquet:"name=file"`
+	Integrity          string    `json:"integrity,omitempty" parquet:"name=integrity, type=BYTE_ARRAY, convertedtype=UTF8"`
+	IntegrityLevel     int32     `json:"integrity_id,omitempty" parquet:"name=integrity_id, type=INT32"`
+	Lineage            []string  `json:"lineage,omitempty" parquet:"name=lineage, type=LIST, valuetype=BYTE_ARRAY, valueconvertedtype=UTF8"`
+	LoadedModules      []string  `json:"loaded_modules,omitempty" parquet:"name=loaded_modules, type=LIST, valuetype=BYTE_ARRAY, valueconvertedtype=UTF8"`
+	Name               string    `json:"name,omitempty" parquet:"name=name, type=BYTE_ARRAY, convertedtype=UTF8"`
+	ParentProcess      *Process  `json:"parent_process,omitempty" parquet:"name=parent_process type=INT64"`
+	Path               string    `json:"path" parquet:"name=path, type=BYTE_ARRAY, convertedtype=UTF8"`
+	ProcessID          int32     `json:"pid" parquet:"name=pid, type=INT32"`
+	ProcessUID         int32     `json:"uid,omitempty" parquet:"name=uid, type=INT32"`
+	RunAsUser          User      `json:"run_as,omitempty" parquet:"name=run_as"`
+	Sandbox            string    `json:"sandbox,omitempty" parquet:"name=sandbox, type=BYTE_ARRAY, convertedtype=UTF8"`
+	TerminatedTime     time.Time `json:"terminated_time,omitempty" parquet:"name=terminated_time, type=TIMESTAMP_MILLIS"`
+	ThreadID           int32     `json:"tid,omitempty" parquet:"name=tid, type=INT32"`
 }
 
 type Resource struct { //see https://schema.ocsf.io/objects/resource
@@ -195,33 +195,33 @@ type Product struct { //see https://schema.ocsf.io/objects/product
 }
 
 type File struct { //see https://schema.ocsf.io/objects/file
-	AccessedTime       time.Time              `json:"accessed_time,omitempty" parquet:"name=accessed_time, type=TIMESTAMP_MILLIS"`
-	Accessor           string                 `json:"accessor,omitempty" parquet:"name=accessor, type=BYTE_ARRAY, convertedtype=UTF8"`
-	Attributes         int32                  `json:"attributes,omitempty" parquet:"name=attributes, type=INT32"`
-	CompanyName        string                 `json:"company_name,omitempty" parquet:"name=company_name, type=BYTE_ARRAY, convertedtype=UTF8"`
-	Confidentiality    string                 `json:"confidentiality,omitempty" parquet:"name=confidentiality, type=BYTE_ARRAY, convertedtype=UTF8"`
-	ConfidentialityID  int32                  `json:"confidentiality_id,omitempty" parquet:"name=confidentiality_id, type=INT32"`
-	CreatedTime        time.Time              `json:"created_time,omitempty" parquet:"name=created_time, type=TIMESTAMP_MILLIS"`
-	Creator            string                 `json:"creator,omitempty" parquet:"name=creator, type=BYTE_ARRAY, convertedtype=UTF8"`
-	Description        string                 `json:"desc,omitempty" parquet:"name=desc, type=BYTE_ARRAY, convertedtype=UTF8"`
-	DigitalSignature   DigitalSignature       `json:"signature,omitempty" parquet:"name=signature"`
-	ExtendedAttributes map[string]interface{} `json:"xattributes,omitempty" parquet:"name=xattributes, type=MAP, keytype=BYTE_ARRAY, keyconvertedtype=UTF8"`
-	Fingerprints       []Fingerprint          `json:"fingerprints,omitempty" parquet:"name=fingerprints type=LIST"`
-	MIMEType           string                 `json:"mime_type,omitempty" parquet:"name=mime_type, type=BYTE_ARRAY, convertedtype=UTF8"`
-	ModifiedTime       time.Time              `json:"modified_time,omitempty" parquet:"name=modified_time, type=TIMESTAMP_MILLIS"`
-	Modifier           string                 `json:"modifier,omitempty" parquet:"name=modifier, type=BYTE_ARRAY, convertedtype=UTF8"`
-	Name               string                 `json:"name" parquet:"name=name, type=BYTE_ARRAY, convertedtype=UTF8"`
-	Owner              string                 `json:"owner,omitempty" parquet:"name=owner, type=BYTE_ARRAY, convertedtype=UTF8"`
-	ParentFolder       string                 `json:"parent_folder,omitempty" parquet:"name=parent_folder, type=BYTE_ARRAY, convertedtype=UTF8"`
-	Path               string                 `json:"path,omitempty" parquet:"name=path, type=BYTE_ARRAY, convertedtype=UTF8"`
-	Product            *Product               `json:"product,omitempty" parquet:"name=product, type=INT64"`
-	SecurityDescriptor string                 `json:"security_descriptor,omitempty" parquet:"name=security_descriptor, type=BYTE_ARRAY, convertedtype=UTF8"`
-	Size               int32                  `json:"size,omitempty" parquet:"name=size, type=INT32"`
-	System             bool                   `json:"is_system,omitempty" parquet:"name=is_system, type=BOOLEAN"`
-	Type               string                 `json:"type" parquet:"name=type, type=BYTE_ARRAY, convertedtype=UTF8"`
-	TypeID             int32                  `json:"type_id" parquet:"name=type_id, type=INT32"`
-	UniqueID           string                 `json:"uid,omitempty" parquet:"name=uid, type=BYTE_ARRAY, convertedtype=UTF8"`
-	Version            string                 `json:"version,omitempty" parquet:"name=version, type=BYTE_ARRAY, convertedtype=UTF8"`
+	AccessedTime       time.Time        `json:"accessed_time,omitempty" parquet:"name=accessed_time, type=TIMESTAMP_MILLIS"`
+	Accessor           string           `json:"accessor,omitempty" parquet:"name=accessor, type=BYTE_ARRAY, convertedtype=UTF8"`
+	Attributes         int32            `json:"attributes,omitempty" parquet:"name=attributes, type=INT32"`
+	CompanyName        string           `json:"company_name,omitempty" parquet:"name=company_name, type=BYTE_ARRAY, convertedtype=UTF8"`
+	Confidentiality    string           `json:"confidentiality,omitempty" parquet:"name=confidentiality, type=BYTE_ARRAY, convertedtype=UTF8"`
+	ConfidentialityID  int32            `json:"confidentiality_id,omitempty" parquet:"name=confidentiality_id, type=INT32"`
+	CreatedTime        time.Time        `json:"created_time,omitempty" parquet:"name=created_time, type=TIMESTAMP_MILLIS"`
+	Creator            string           `json:"creator,omitempty" parquet:"name=creator, type=BYTE_ARRAY, convertedtype=UTF8"`
+	Description        string           `json:"desc,omitempty" parquet:"name=desc, type=BYTE_ARRAY, convertedtype=UTF8"`
+	DigitalSignature   DigitalSignature `json:"signature,omitempty" parquet:"name=signature"`
+	ExtendedAttributes string           `json:"xattributes,omitempty" parquet:"name=xattributes, type=BYTE_ARRAY, convertedtype=UTF8"`
+	Fingerprints       []Fingerprint    `json:"fingerprints,omitempty" parquet:"name=fingerprints type=LIST"`
+	MIMEType           string           `json:"mime_type,omitempty" parquet:"name=mime_type, type=BYTE_ARRAY, convertedtype=UTF8"`
+	ModifiedTime       time.Time        `json:"modified_time,omitempty" parquet:"name=modified_time, type=TIMESTAMP_MILLIS"`
+	Modifier           string           `json:"modifier,omitempty" parquet:"name=modifier, type=BYTE_ARRAY, convertedtype=UTF8"`
+	Name               string           `json:"name" parquet:"name=name, type=BYTE_ARRAY, convertedtype=UTF8"`
+	Owner              string           `json:"owner,omitempty" parquet:"name=owner, type=BYTE_ARRAY, convertedtype=UTF8"`
+	ParentFolder       string           `json:"parent_folder,omitempty" parquet:"name=parent_folder, type=BYTE_ARRAY, convertedtype=UTF8"`
+	Path               string           `json:"path,omitempty" parquet:"name=path, type=BYTE_ARRAY, convertedtype=UTF8"`
+	Product            *Product         `json:"product,omitempty" parquet:"name=product, type=INT64"`
+	SecurityDescriptor string           `json:"security_descriptor,omitempty" parquet:"name=security_descriptor, type=BYTE_ARRAY, convertedtype=UTF8"`
+	Size               int32            `json:"size,omitempty" parquet:"name=size, type=INT32"`
+	System             bool             `json:"is_system,omitempty" parquet:"name=is_system, type=BOOLEAN"`
+	Type               string           `json:"type" parquet:"name=type, type=BYTE_ARRAY, convertedtype=UTF8"`
+	TypeID             int32            `json:"type_id" parquet:"name=type_id, type=INT32"`
+	UniqueID           string           `json:"uid,omitempty" parquet:"name=uid, type=BYTE_ARRAY, convertedtype=UTF8"`
+	Version            string           `json:"version,omitempty" parquet:"name=version, type=BYTE_ARRAY, convertedtype=UTF8"`
 }
 
 type User struct { //see https://schema.ocsf.io/objects/user

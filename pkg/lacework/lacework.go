@@ -3,12 +3,13 @@ package lacework
 import "time"
 
 type Config struct {
-	DefaultAccount string
-	Instance       string
-	EventMap       map[string][]int
-	Region         string
-	Telemetry      bool
-	Version        string
+	Instance     string
+	EventMap     map[string][]int
+	Region       string
+	Telemetry    bool
+	Version      string
+	HoneyDataset string
+	HoneyKey     string
 }
 
 type LaceworkEvent struct {
