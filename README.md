@@ -47,6 +47,8 @@ To investigate any issues, use the following steps:
 4. Click the button **View logs in CloudWatch** to launch CloudWatch into a new tab.
 5. View the **Log stream** debug for errors.
 
+![CloudWatch](https://user-images.githubusercontent.com/6440106/200621487-1588221c-ceb0-4e44-b587-9ede48dfdd28.png)
+
 #### Security Findings Event Troubleshooting
 If there are issues with Lacework Security Alerts being transformed to OCSF and AWS Moose, investigate the Lambda function _<stack-name>-LaceworkEventSetupFunction-xxxx_. It transforms Lacework Security alerts into OCSF Security Findings format and delivers these in Parquet file format to the AWS Moose S3 bucket.
 To investigate any issues, use the following steps:
@@ -56,6 +58,8 @@ To investigate any issues, use the following steps:
 3. Click the **Monitor** tab.
 4. Click the button **View logs in CloudWatch** to launch CloudWatch into a new tab.
 5. View the **Log stream** debug for errors.
+
+![CloudWatch Logs](https://user-images.githubusercontent.com/6440106/200621625-01692823-b496-4090-b49d-98c0058d05cd.png)
 
 ###
 Updates to the integration are provided through CloudFormation template updates. This may upgrade architecture and the Lambda functions.
