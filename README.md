@@ -24,7 +24,8 @@ CloudFormation is used to set up the Lacework integration with AWS Moose. The Cl
 
    For most deployments, you only need the Basic Configuration parameters.
    ![basic](https://user-images.githubusercontent.com/6440106/200466378-c7940e9a-128a-40c3-8281-03cadea31561.png)
-   Specify the following Basic Configuration parameters:
+   
+2. Specify the following Basic Configuration parameters:
     * Enter a **Stack name** for the stack.
     * Enter the **Moose S3 Bucket Name**.
     * Enter **Your Lacework URL**.
@@ -38,11 +39,11 @@ CloudFormation is used to set up the Lacework integration with AWS Moose. The Cl
 Troubleshooting this integration can be done by monitoring the CloudWatch logs for two Lambda functions. One Lambda function is responsible for some of the initial setup during the CloudFormation deployment. The second Lambda function transforms Lacework security alerts to the OCSF security findings for AWS Moose.
 
 #### Initial Setup Troubleshooting
-Some initial set up during the CloudFormation deployment is handled by a Lambda function _<stack-name>-LaceworkMooseSetupFunction-xxxx_. Specifically, it configures the Alert Channel and Alert Rules that are required to send Lacework Security Alerts to the second Lambda function for transformation into OCSF and AWS Moose.
+Some initial set up during the CloudFormation deployment is handled by a Lambda function _stack-name_-LaceworkMooseSetupFunction-_xxxx_. Specifically, it configures the Alert Channel and Alert Rules that are required to send Lacework Security Alerts to the second Lambda function for transformation into OCSF and AWS Moose.
 To investigate any issues, use the following steps:
 
 1. Go to Lambda in your AWS management console.
-2. Find the Lambda function with the name _<stack-name>-LaceworkMooseSetupFunction-xxxx_.
+2. Find the Lambda function with the name _stack-name_-LaceworkMooseSetupFunction-_xxxx_.
 3. Click the **Monitor** tab.
 4. Click the button **View logs in CloudWatch** to launch CloudWatch into a new tab.
 5. View the **Log stream** debug for errors.
@@ -50,11 +51,11 @@ To investigate any issues, use the following steps:
 ![CloudWatch](https://user-images.githubusercontent.com/6440106/200621487-1588221c-ceb0-4e44-b587-9ede48dfdd28.png)
 
 #### Security Findings Event Troubleshooting
-If there are issues with Lacework Security Alerts being transformed to OCSF and AWS Moose, investigate the Lambda function _<stack-name>-LaceworkEventSetupFunction-xxxx_. It transforms Lacework Security alerts into OCSF Security Findings format and delivers these in Parquet file format to the AWS Moose S3 bucket.
+If there are issues with Lacework Security Alerts being transformed to OCSF and AWS Moose, investigate the Lambda function _stack-name_-LaceworkEventSetupFunction-_xxxx_. It transforms Lacework Security alerts into OCSF Security Findings format and delivers these in Parquet file format to the AWS Moose S3 bucket.
 To investigate any issues, use the following steps:
 
 1. Go to Lambda in your AWS management console.
-2. Find the Lambda function with the name _<stack-name>-LaceworkMooseEventFunction-xxxx_.
+2. Find the Lambda function with the name _stack-name_-LaceworkMooseEventFunction-_xxxx_.
 3. Click the **Monitor** tab.
 4. Click the button **View logs in CloudWatch** to launch CloudWatch into a new tab.
 5. View the **Log stream** debug for errors.
