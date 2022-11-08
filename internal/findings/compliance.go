@@ -11,8 +11,8 @@ type Compliance struct {
 	config lacework.Config
 }
 
-func (c *Compliance) Findings(ctx context.Context) []*ocsf.SecurityFinding {
-	var fs []*ocsf.SecurityFinding
+func (c *Compliance) Findings(ctx context.Context) []ocsf.SecurityFinding {
+	var fs []ocsf.SecurityFinding
 	// determine what cloud provider
 	cloud := getComplianceCloud(c.Event.Detail.Summary)
 	// grab the config struct from the context
@@ -20,7 +20,7 @@ func (c *Compliance) Findings(ctx context.Context) []*ocsf.SecurityFinding {
 	for _, data := range c.Event.Detail.EventDetails.Data {
 		finding := mapDefault(ctx, c.Event)
 		c.enrich(finding, cloud, data)
-		fs = append(fs, &finding)
+		fs = append(fs, finding)
 	}
 	return fs
 }

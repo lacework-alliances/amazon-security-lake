@@ -15,14 +15,14 @@ type App struct {
 	config lacework.Config
 }
 
-func (a App) Findings(ctx context.Context) []*ocsf.SecurityFinding {
-	var fs []*ocsf.SecurityFinding
+func (a App) Findings(ctx context.Context) []ocsf.SecurityFinding {
+	var fs []ocsf.SecurityFinding
 	// grab the config struct from the context
 	a.config = ctx.Value("config").(lacework.Config)
 	for _, data := range a.Event.Detail.EventDetails.Data {
 		finding := mapDefault(ctx, a.Event)
 		a.enrich(finding, data)
-		fs = append(fs, &finding)
+		fs = append(fs, finding)
 	}
 	return fs
 }

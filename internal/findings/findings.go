@@ -15,8 +15,8 @@ const (
 	VERSION = "1.0.0"
 )
 
-func EventToOCSF(ctx context.Context, le lacework.LaceworkEvent) []*ocsf.SecurityFinding {
-	var fs []*ocsf.SecurityFinding
+func EventToOCSF(ctx context.Context, le lacework.LaceworkEvent) []ocsf.SecurityFinding {
+	var fs []ocsf.SecurityFinding
 	var category string
 	// get the category to determine finding
 	category = le.Detail.EventCategory
@@ -39,16 +39,16 @@ func EventToOCSF(ctx context.Context, le lacework.LaceworkEvent) []*ocsf.Securit
 		fs = append(fs, findings...)
 	case "GcpAuditTrail":
 		finding := mapDefault(ctx, le)
-		fs = append(fs, &finding)
+		fs = append(fs, finding)
 	case "User":
 		finding := mapDefault(ctx, le)
-		fs = append(fs, &finding)
+		fs = append(fs, finding)
 	case "TestEvent":
 		return fs
 	default:
 		fmt.Printf("Unknown category: %s\n", category)
 		finding := mapDefault(ctx, le)
-		fs = append(fs, &finding)
+		fs = append(fs, finding)
 	}
 
 	return fs
@@ -67,9 +67,9 @@ func mapDefault(ctx context.Context, le lacework.LaceworkEvent) ocsf.SecurityFin
 		CategoryUID: ocsf.CategoryUIDFindings,
 		Class:       "Security Finding",
 		ClassUID:    ocsf.ClassUIDSecurityFinding,
-		EventTime:   le.Time,
+		EventTime:   le.Time.Unix(),
 		Finding: ocsf.FindingDetails{
-			CreatedTime: le.Time,
+			CreatedTime: le.Time.Unix(),
 			Description: le.Detail.Summary,
 			SourceURL:   le.Detail.Link,
 			Title:       le.Detail.EventName,
@@ -78,18 +78,17 @@ func mapDefault(ctx context.Context, le lacework.LaceworkEvent) ocsf.SecurityFin
 		Message: desc,
 		Metadata: ocsf.Metadata{
 			EventUID:     le.ID,
-			OriginalTime: le.Time,
+			OriginalTime: le.Time.Unix(),
 			Product: ocsf.Product{
 				Language:       "en",
 				ProductID:      "lacework-polygraph-data-platform",
+				ProductName:    "Lacework Polygraph Data Platform",
 				ProductVersion: le.Version,
 				VendorName:     "Lacework",
 			},
-			Profiles:       nil,
-			SequenceNumber: nil,
-			Version:        VERSION,
+			Version: VERSION,
 		},
-		SeverityID: getOCSFSeverityID(le.Detail.Severity),
+		SeverityID: int32(getOCSFSeverityID(le.Detail.Severity)),
 		StateID:    ocsf.StateIDNew,
 		TypeName:   "Security Finding: Generate",
 		TypeID:     ocsf.TypeUIDGenerate,

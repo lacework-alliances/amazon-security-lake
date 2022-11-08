@@ -224,12 +224,23 @@ Resources:
           PolicyDocument:
             Version: 2012-10-17
             Statement:
-              - Sid: AWSMooseS3
+              - Sid: MooseReadBucket
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !Sub 'arn:aws:s3:::${MooseS3BucketName}'
+              - Sid: MooseWrite
                 Effect: Allow
                 Action:
                   - s3:PutObject
+                  - s3:PutObjectAcl
+                  - s3:GetObject
+                  - s3:GetObjectAcl
+                  - s3:DeleteObject
                 Resource:
-                  - !Sub 'arn:aws:s3:::${MooseS3BucketName}'
+                  - !Sub 'arn:aws:s3:::${MooseS3BucketName}/*'
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole'
 
@@ -248,6 +259,7 @@ Resources:
       Runtime: go1.x
       Environment:
         Variables:
+          lacework_url: !Ref LaceworkURL
           moose_s3_bucket_name: !Ref MooseS3BucketName
       Role: !GetAtt LaceworkMooseEventFunctionRole.Arn
 
