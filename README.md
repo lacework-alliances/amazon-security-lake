@@ -62,5 +62,5 @@ To investigate any issues, use the following steps:
 
 ![CloudWatch Logs](https://user-images.githubusercontent.com/6440106/200621625-01692823-b496-4090-b49d-98c0058d05cd.png)
 
-###
+### Updates
 Updates to the integration are provided through CloudFormation template updates. This may upgrade architecture and the Lambda functions.
