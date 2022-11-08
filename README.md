@@ -3,17 +3,17 @@
 ![Lacework](https://user-images.githubusercontent.com/6440106/152378397-90c862e9-19fb-4427-96d0-02ca6c87f4dd.png)
 
 ## Overview
-This repository contains Lacework's integration with AWS Moose, a security data lake that is based on the [OCSF standard](https://schema.ocsf.io/).
-Lacework integrates with “AWS MOOSE'' as a data source and provides our security findings that include software vulnerabilities, misconfigurations, and known and unknown threats.
+Lacework can integrate with AWS Moose, a security data lake that is based on the [OCSF standard](https://schema.ocsf.io/).
+Lacework integrates as a data source and provides our real-time security findings. These security findings include software and infrastructure-as-code (IaC) vulnerabilities, cloud resource security misconfigurations, and known and unknown security threat behaviors.
 
 ## Architecture
 ![moose](https://user-images.githubusercontent.com/6440106/200464957-6fd1df7d-e3ed-4e86-994b-60dd0bc0dbc0.png)
 
 ## CloudFormation Deployment
-CloudFormation is used to deploy the Lacework integration with AWS Moose. The CloudFormation template creates the EventBridge rules, IAM permissions, SNS topic, SQS queue, Lambda event transformation function and the Lacework outbound security alert channel.
+CloudFormation is used to set up the Lacework integration with AWS Moose. The CloudFormation template creates the EventBridge rules, IAM permissions, SNS topic, SQS queue, Lambda event transformation function and the Lacework outbound security alert channel.
 
 ### Prerequisites
-* Access to a Lacework Instance
+* Administrator access to a Lacework instance
 * [Lacework Admin API Key and Secret](https://docs.lacework.com/api/api-access-keys-and-tokens)
 
 ### Deploy the CloudFormation Template
@@ -28,7 +28,34 @@ CloudFormation is used to deploy the Lacework integration with AWS Moose. The Cl
     * Enter a **Stack name** for the stack.
     * Enter the **Moose S3 Bucket Name**.
     * Enter **Your Lacework URL**.
+    * If you Lacework instance has the Organization feature enabled, enter the **Lacework Sub-Account Name**. Otherwise, leave this field blank.
     * Enter your **Lacework Access Key ID** and **Lacework Secret Key** that you copied from your API Keys file. See [here](https://docs.lacework.com/console/generate-api-access-keys-and-tokens).
+     
 3. Click **Next** through to your stack **Review**.
 4. Accept the AWS CloudFormation terms and click **Create stack**.
 
+### Troubleshooting
+Troubleshooting this integration can be done by monitoring the CloudWatch logs for two Lambda functions. One Lambda function is responsible for some of the initial setup during the CloudFormation deployment. The second Lambda function transforms Lacework security alerts to the OCSF security findings for AWS Moose.
+
+#### Initial Setup Troubleshooting
+Some initial set up during the CloudFormation deployment is handled by a Lambda function _<stack-name>-LaceworkMooseSetupFunction-xxxx_. Specifically, it configures the Alert Channel and Alert Rules that are required to send Lacework Security Alerts to the second Lambda function for transformation into OCSF and AWS Moose.
+To investigate any issues, use the following steps:
+
+1. Go to Lambda in your AWS management console.
+2. Find the Lambda function with the name _<stack-name>-LaceworkMooseSetupFunction-xxxx_.
+3. Click the **Monitor** tab.
+4. Click the button **View logs in CloudWatch** to launch CloudWatch into a new tab.
+5. View the **Log stream** debug for errors.
+
+#### Security Findings Event Troubleshooting
+If there are issues with Lacework Security Alerts being transformed to OCSF and AWS Moose, investigate the Lambda function _<stack-name>-LaceworkEventSetupFunction-xxxx_. It transforms Lacework Security alerts into OCSF Security Findings format and delivers these in Parquet file format to the AWS Moose S3 bucket.
+To investigate any issues, use the following steps:
+
+1. Go to Lambda in your AWS management console.
+2. Find the Lambda function with the name _<stack-name>-LaceworkMooseEventFunction-xxxx_.
+3. Click the **Monitor** tab.
+4. Click the button **View logs in CloudWatch** to launch CloudWatch into a new tab.
+5. View the **Log stream** debug for errors.
+
+###
+Updates to the integration are provided through CloudFormation template updates. This may upgrade architecture and the Lambda functions.
