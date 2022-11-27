@@ -1,4 +1,4 @@
-module github.com/lacework-alliances/aws-moose-integration
+module github.com/lacework-alliances/amazon-security-lake
 
 go 1.17
 

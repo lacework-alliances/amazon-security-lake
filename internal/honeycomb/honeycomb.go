@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/lacework-alliances/aws-moose-integration/pkg/lacework"
+	"github.com/lacework-alliances/amazon-security-lake/pkg/lacework"
 	"net/http"
 )
 

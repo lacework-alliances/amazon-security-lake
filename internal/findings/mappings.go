@@ -1,6 +1,6 @@
 package findings
 
-import "github.com/lacework-alliances/aws-moose-integration/pkg/ocsf"
+import "github.com/lacework-alliances/amazon-security-lake/pkg/ocsf"
 
 // InitMap initializes maps based on the event type to an AWS Finding Type
 func InitMap() map[string][]int {

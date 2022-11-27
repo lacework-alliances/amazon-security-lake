@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/securityhub"
-	"github.com/lacework-alliances/aws-moose-integration/pkg/lacework"
-	"github.com/lacework-alliances/aws-moose-integration/pkg/ocsf"
+	"github.com/lacework-alliances/amazon-security-lake/pkg/lacework"
+	"github.com/lacework-alliances/amazon-security-lake/pkg/ocsf"
 	"regexp"
 	"strings"
 )

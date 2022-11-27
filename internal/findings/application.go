@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/lacework-alliances/aws-moose-integration/internal/honeycomb"
-	"github.com/lacework-alliances/aws-moose-integration/pkg/lacework"
-	"github.com/lacework-alliances/aws-moose-integration/pkg/ocsf"
+	"github.com/lacework-alliances/amazon-security-lake/internal/honeycomb"
+	"github.com/lacework-alliances/amazon-security-lake/pkg/lacework"
+	"github.com/lacework-alliances/amazon-security-lake/pkg/ocsf"
 	"strconv"
 )
 

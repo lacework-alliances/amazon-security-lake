@@ -1,24 +1,24 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: "Lacework AWS Moose Integration: Add the Lacework Cloud Security Platform for cloud-native threat detection, compliance, behavioral anomaly detection, and automated AWS security monitoring."
+Description: "Lacework Amazon Security Lake Integration v1.0.0: Add the Lacework Cloud Security Platform for cloud-native threat detection, compliance, behavioral anomaly detection, and automated AWS security monitoring."
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
           default: "Basic Configuration"
         Parameters:
-          - MooseS3BucketName
+          - AmazonSecurityLakeS3BucketName
           - LaceworkURL
           - LaceworkSubAccountName
           - LaceworkAccessKeyID
           - LaceworkSecretKey
           - ResourcePrefixName
     ParameterLabels:
-      MooseS3BucketName:
-        default: Moose S3 Bucket Name
+      AmazonSecurityLakeS3BucketName:
+        default: Amazon Security Lake S3 Bucket Name
       LaceworkURL:
         default: Your Lacework URL
       LaceworkSubAccountName:
-        default: Lacework Sub-Account Name
+        default: Lacework Sub-Account Name (Optional)
       LaceworkAccessKeyID:
         default: Lacework Access Key ID
       LaceworkSecretKey:
@@ -27,10 +27,10 @@ Metadata:
         default: Resource Prefix Name
 Parameters:
   # basic
-  MooseS3BucketName:
+  AmazonSecurityLakeS3BucketName:
     Type: String
-    Default: moose
-    Description: "Moose S3 bucket to use."
+    Default: amazon-security-lake
+    Description: "Amazon Security Lake S3 bucket to use. This bucket is provided when you create the Lacework Custom Source in the Amazon Security Lake console."
     MinLength: '1'
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9_-]*'
     ConstraintDescription: "Invalid S3 bucket name."
@@ -63,10 +63,15 @@ Parameters:
     Description: "Specify the prefix to use for all resources that are created: EventBridge event bus, event rule, SQS queue, alert channel and rule."
     AllowedPattern: '^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$'
     ConstraintDescription: "Resource prefix name may contain alphanumeric characters and dashes only."
-    Default: "Lacework-Moose"
+    Default: "Lacework-AmazonSecurityLake"
 Resources:
   LambdaZipsBucket:
     Type: AWS::S3::Bucket
+
+  AmazonSecurityLakeCacheS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "amazon-security-lake-cache-${AWS::AccountId}-${AWS::Region}"
 
   CopyZips:
     Type: Custom::CopyZips
@@ -74,9 +79,9 @@ Resources:
       ServiceToken: !GetAtt 'CopyZipsFunction.Arn'
       DestBucket: !Ref 'LambdaZipsBucket'
       SourceBucket: 'lacework-alliances'
-      Prefix: 'lacework-moose'
+      Prefix: 'lacework-amazon-security-lake'
       Objects:
-        - '/lambda/moose.zip'
+        - '/lambda/amazon-security-lake.zip'
 
   CopyZipsRole:
     Type: AWS::IAM::Role
@@ -101,14 +106,14 @@ Resources:
                   - s3:GetObject
                   - s3:GetObjectTagging
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::lacework-alliances/lacework-moose*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::lacework-alliances/lacework-amazon-security-lake*'
               - Effect: Allow
                 Action:
                   - s3:PutObject
                   - s3:DeleteObject
                   - s3:PutObjectTagging
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::${LambdaZipsBucket}/lacework-moose*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${LambdaZipsBucket}/lacework-amazon-security-lake*'
 
   CopyZipsFunction:
     Type: AWS::Lambda::Function
@@ -169,13 +174,13 @@ Resources:
                   timer.cancel()
                   cfnresponse.send(event, context, status, {}, None)
 
-  LaceworkMooseSetupFunction:
+  LaceworkAmazonSecurityLakeSetupFunction:
     Type: AWS::Lambda::Function
     DependsOn: CopyZips
     Properties:
       Code:
         S3Bucket: !Ref LambdaZipsBucket
-        S3Key: !Join ['', ['lacework-moose', '/lambda/moose.zip']]
+        S3Key: !Join ['', ['lacework-amazon-security-lake', '/lambda/amazon-security-lake.zip']]
       Handler: setup
       Runtime: go1.x
       Environment:
@@ -184,11 +189,11 @@ Resources:
           lacework_sub_account_name: !Ref LaceworkSubAccountName
           lacework_access_key_id: !Ref LaceworkAccessKeyID
           lacework_secret_key: !Ref LaceworkSecretKey
-          event_bus_arn: !GetAtt LaceworkMooseEventBus.Arn
-          alert_channel_name: !Join [ "-", ["Lacework-Moose", !Select [2, !Split [ "/", !Ref 'AWS::StackId']]]]
-      Role: !GetAtt LaceworkMooseSetupFunctionRole.Arn
+          event_bus_arn: !GetAtt LaceworkAmazonSecurityLakeEventBus.Arn
+          alert_channel_name: !Join [ "-", ["Lacework-Amazon-Security-Lake", !Select [2, !Split [ "/", !Ref 'AWS::StackId']]]]
+      Role: !GetAtt LaceworkAmazonSecurityLakeSetupFunctionRole.Arn
 
-  LaceworkMooseSetupFunctionRole:
+  LaceworkAmazonSecurityLakeSetupFunctionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -202,13 +207,13 @@ Resources:
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
 
-  LaceworkMooseSetup: # this will launch the setup function
+  LaceworkAmazonSecurityLakeSetup: # this will launch the setup function
     Type: AWS::CloudFormation::CustomResource
     Properties:
       ServiceToken:
-        !GetAtt LaceworkMooseSetupFunction.Arn
+        !GetAtt LaceworkAmazonSecurityLakeSetupFunction.Arn
 
-  LaceworkMooseEventFunctionRole:
+  LaceworkAmazonSecurityLakeEventFunctionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -220,18 +225,19 @@ Resources:
             Action: sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: AWS_Moose_Operations
+        - PolicyName: AWS_AmazonSecurityLake_Operations
           PolicyDocument:
             Version: 2012-10-17
             Statement:
-              - Sid: MooseReadBucket
+              - Sid: AmazonSecurityLakeReadBucket
                 Effect: Allow
                 Action:
                   - s3:ListBucket
                   - s3:GetBucketLocation
                 Resource:
-                  - !Sub 'arn:aws:s3:::${MooseS3BucketName}'
-              - Sid: MooseWrite
+                  - !Sub 'arn:aws:s3:::${AmazonSecurityLakeS3BucketName}'
+                  - !Sub 'arn:aws:s3:::${AmazonSecurityLakeCacheS3Bucket}'
+              - Sid: AmazonSecurityLakeWrite
                 Effect: Allow
                 Action:
                   - s3:PutObject
@@ -239,20 +245,22 @@ Resources:
                   - s3:GetObject
                   - s3:GetObjectAcl
                   - s3:DeleteObject
+                  - s3:GetObjectAttributes
                 Resource:
-                  - !Sub 'arn:aws:s3:::${MooseS3BucketName}/*'
+                  - !Sub 'arn:aws:s3:::${AmazonSecurityLakeS3BucketName}/*'
+                  - !Sub 'arn:aws:s3:::${AmazonSecurityLakeCacheS3Bucket}/*'
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole'
 
-  LaceworkMooseEventFunction:
+  LaceworkAmazonSecurityLakeEventFunction:
     Type: AWS::Lambda::Function
     DependsOn:
     - CopyZips
-    - LaceworkMooseQueue
+    - LaceworkAmazonSecurityLakeQueue
     Properties:
       Code:
         S3Bucket: !Ref LambdaZipsBucket
-        S3Key: !Join ['', ['lacework-moose', '/lambda/moose.zip']]
+        S3Key: !Join ['', ['lacework-amazon-security-lake', '/lambda/amazon-security-lake.zip']]
       Handler: main
       MemorySize: 256
       Timeout: 30
@@ -260,38 +268,39 @@ Resources:
       Environment:
         Variables:
           lacework_url: !Ref LaceworkURL
-          moose_s3_bucket_name: !Ref MooseS3BucketName
-      Role: !GetAtt LaceworkMooseEventFunctionRole.Arn
+          amazon_security_lake_s3_bucket_name: !Ref AmazonSecurityLakeS3BucketName
+          amazon_security_lake_cache_s3_bucket_name: !Ref AmazonSecurityLakeCacheS3Bucket
+      Role: !GetAtt LaceworkAmazonSecurityLakeEventFunctionRole.Arn
 
-  LaceworkMooseEventBus:
+  LaceworkAmazonSecurityLakeEventBus:
     Type: AWS::Events::EventBus
     Properties:
       Name: !Join ['', [!Ref ResourcePrefixName, '-Event-Bus']]
 
-  LaceworkMooseEventBusPolicy:
+  LaceworkAmazonSecurityLakeEventBusPolicy:
     Type: AWS::Events::EventBusPolicy
     Properties:
-      EventBusName: !Ref LaceworkMooseEventBus
-      StatementId: "LaceworkMooseEventBusStatement"
+      EventBusName: !Ref LaceworkAmazonSecurityLakeEventBus
+      StatementId: "LaceworkAmazonSecurityLakeEventBusStatement"
       Statement:
         Effect: "Allow"
         Principal:
           AWS: "arn:aws:iam::434813966438:root"
         Action: "events:PutEvents"
-        Resource: !GetAtt LaceworkMooseEventBus.Arn
+        Resource: !GetAtt LaceworkAmazonSecurityLakeEventBus.Arn
 
-  LaceworkMooseEvents:
+  LaceworkAmazonSecurityLakeEvents:
     Type: 'AWS::Events::Rule'
     Properties:
       Description: "Captures Lacework Security Events"
-      EventBusName: !GetAtt LaceworkMooseEventBus.Name
+      EventBusName: !GetAtt LaceworkAmazonSecurityLakeEventBus.Name
       EventPattern:
         account: ["434813966438"]
       Name: !Join ['', [!Ref ResourcePrefixName, '-Event-Rule']]
       State: ENABLED
       Targets:
-        - Arn: !GetAtt LaceworkMooseQueue.Arn
-          Id: lacework-moose-event-to-sqs-queue
+        - Arn: !GetAtt LaceworkAmazonSecurityLakeQueue.Arn
+          Id: lacework-amazon-security-lake-event-to-sqs-queue
 
   EventBridgeToToSqsPolicy:
     Type: AWS::SQS::QueuePolicy
@@ -302,19 +311,19 @@ Resources:
             Principal:
               Service: events.amazonaws.com
             Action: SQS:SendMessage
-            Resource:  !GetAtt LaceworkMooseQueue.Arn
+            Resource:  !GetAtt LaceworkAmazonSecurityLakeQueue.Arn
       Queues:
-        - !Ref LaceworkMooseQueue
+        - !Ref LaceworkAmazonSecurityLakeQueue
 
-  LaceworkMooseQueue:
+  LaceworkAmazonSecurityLakeQueue:
     Type: 'AWS::SQS::Queue'
     Properties:
       QueueName: !Join ['', [!Ref ResourcePrefixName, '-Event-Queue']]
       DelaySeconds: 0
       MessageRetentionPeriod: 86400
 
-  LaceworkMooseEventSourceMapping:
+  LaceworkAmazonSecurityLakeEventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
     Properties:
-      EventSourceArn: !GetAtt LaceworkMooseQueue.Arn
-      FunctionName: !GetAtt LaceworkMooseEventFunction.Arn
+      EventSourceArn: !GetAtt LaceworkAmazonSecurityLakeQueue.Arn
+      FunctionName: !GetAtt LaceworkAmazonSecurityLakeEventFunction.Arn

@@ -13,6 +13,7 @@ Lacework integrates as a data source and provides our real-time security finding
 CloudFormation is used to set up the Lacework integration with AWS Moose. The CloudFormation template creates the EventBridge rules, IAM permissions, SNS topic, SQS queue, Lambda event transformation function and the Lacework outbound security alert channel.
 
 ### Prerequisites
+* Subscription to Lacework. Acquire through [AWS Marketplace listing](https://aws.amazon.com/marketplace/pp/prodview-uv2dct6bigr54?sr=0-1&ref_=beagle&applicationId=AWSMPContessa).
 * Administrator access to a Lacework instance
 * [Lacework Admin API Key and Secret](https://docs.lacework.com/api/api-access-keys-and-tokens)
 

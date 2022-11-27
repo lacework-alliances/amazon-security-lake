@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-lambda-go/cfn"
 	lam "github.com/aws/aws-lambda-go/lambda"
 	"github.com/jefferyfry/funclog"
-	"github.com/lacework-alliances/aws-moose-integration/internal/honeycomb"
+	"github.com/lacework-alliances/amazon-security-lake/internal/honeycomb"
 	"net/http"
 	"net/http/httputil"
 	"os"
