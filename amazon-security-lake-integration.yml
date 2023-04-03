@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: "Lacework Amazon Security Lake Integration v1.0.0: Add the Lacework Cloud Security Platform for cloud-native threat detection, compliance, behavioral anomaly detection, and automated AWS security monitoring."
+Description: "Lacework Amazon Security Lake Integration v1.1.0: Add the Lacework Cloud Security Platform for cloud-native threat detection, compliance, behavioral anomaly detection, and automated AWS security monitoring."
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -176,7 +176,13 @@ Resources:
 
   LaceworkAmazonSecurityLakeSetupFunction:
     Type: AWS::Lambda::Function
-    DependsOn: CopyZips
+    DependsOn:
+      - CopyZips
+      - LaceworkAmazonSecurityLakeEventBus
+      - LaceworkAmazonSecurityLakeEventBusPolicy
+      - LaceworkAmazonSecurityLakeQueue
+      - LaceworkAmazonSecurityLakeEventFunction
+      - LaceworkAmazonSecurityLakeEventsRule
     Properties:
       Code:
         S3Bucket: !Ref LambdaZipsBucket
@@ -210,8 +216,7 @@ Resources:
   LaceworkAmazonSecurityLakeSetup: # this will launch the setup function
     Type: AWS::CloudFormation::CustomResource
     Properties:
-      ServiceToken:
-        !GetAtt LaceworkAmazonSecurityLakeSetupFunction.Arn
+      ServiceToken: !GetAtt LaceworkAmazonSecurityLakeSetupFunction.Arn
 
   LaceworkAmazonSecurityLakeEventFunctionRole:
     Type: AWS::IAM::Role
@@ -256,7 +261,6 @@ Resources:
     Type: AWS::Lambda::Function
     DependsOn:
     - CopyZips
-    - LaceworkAmazonSecurityLakeQueue
     Properties:
       Code:
         S3Bucket: !Ref LambdaZipsBucket
@@ -289,7 +293,7 @@ Resources:
         Action: "events:PutEvents"
         Resource: !GetAtt LaceworkAmazonSecurityLakeEventBus.Arn
 
-  LaceworkAmazonSecurityLakeEvents:
+  LaceworkAmazonSecurityLakeEventsRule:
     Type: 'AWS::Events::Rule'
     Properties:
       Description: "Captures Lacework Security Events"

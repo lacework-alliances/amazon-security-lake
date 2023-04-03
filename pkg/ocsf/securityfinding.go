@@ -29,7 +29,7 @@ type FindingDetails struct { //see https://schema.ocsf.io/objects/finding
 
 type Metadata struct { //see https://schema.ocsf.io/objects/metadata
 	EventUID     string  `json:"uid,omitempty" parquet:"name=uid, type=BYTE_ARRAY, convertedtype=UTF8"`
-	OriginalTime int64   `json:"original_time,omitempty" parquet:"name=original_time, type=INT64, convertedtype=TIMESTAMP_MILLIS"`
+	OriginalTime string   `json:"original_time,omitempty" parquet:"name=original_time, type=BYTE_ARRAY, convertedtype=UTF8"`
 	Product      Product `json:"product" parquet:"name=product"`
 	Version      string  `json:"version" parquet:"name=version, type=BYTE_ARRAY, convertedtype=UTF8"`
 }

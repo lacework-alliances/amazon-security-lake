@@ -317,7 +317,7 @@ func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.Secu
 	lc, _ := lambdacontext.FromContext(ctx)
 	region := strings.Split(lc.InvokedFunctionArn, ":")[3]
 	account := strings.Split(lc.InvokedFunctionArn, ":")[4]
-	objectKey := fmt.Sprintf("region=%s/AWS_account=%s/eventHour=%s/%s", region, account, createTime.Format("2006010215"), createTime.Format(time.RFC3339))
+	objectKey := fmt.Sprintf("region=%s/AWS_account=%s/eventDay=%s/%s.zstd.parquet", region, account, createTime.Format("2006010215"), createTime.Format(time.RFC3339))
 
 	// create new S3 file writer
 	fw, err := s3.NewS3FileWriter(ctx, securityLakeS3Bucket, objectKey, "bucket-owner-full-control", nil)

@@ -78,7 +78,7 @@ func mapDefault(ctx context.Context, le lacework.LaceworkEvent) ocsf.SecurityFin
 		Message: desc,
 		Metadata: ocsf.Metadata{
 			EventUID:     le.ID,
-			OriginalTime: le.Time.Unix(),
+			OriginalTime: le.Time.String(),
 			Product: ocsf.Product{
 				Language:       "en",
 				ProductID:      "lacework-polygraph-data-platform",

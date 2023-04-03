@@ -284,7 +284,13 @@ func createAlertChannel(name string, eventBusArn string, laceworkUrl string, acc
 					return "", err
 				}
 			} else {
-				return "", errors.New(fmt.Sprintf("Failed sending alert channel request. Response status is %d", resp.StatusCode))
+				respDump, err := httputil.DumpResponse(resp, true)
+				if err != nil {
+					LogWSetup.Println(err)
+				} else {
+					LogWSetup.Printf("Received response: %s", string(respDump))
+				}
+				return "", errors.New(fmt.Sprintf("Failed sending alert channel request. Response status is %s", resp.Status))
 			}
 
 		} else {
