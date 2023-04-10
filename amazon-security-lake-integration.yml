@@ -6,15 +6,18 @@ Metadata:
       - Label:
           default: "Basic Configuration"
         Parameters:
-          - AmazonSecurityLakeS3BucketName
+          - AmazonSecurityLakeS3Location
+          - AmazonSecurityLakeRoleArn
           - LaceworkURL
           - LaceworkSubAccountName
           - LaceworkAccessKeyID
           - LaceworkSecretKey
           - ResourcePrefixName
     ParameterLabels:
-      AmazonSecurityLakeS3BucketName:
-        default: Amazon Security Lake S3 Bucket Name
+      AmazonSecurityLakeS3Location:
+        default: Amazon Security Lake S3 Location
+      AmazonSecurityLakeRoleArn:
+        default: Amazon Security Lake Role ARN
       LaceworkURL:
         default: Your Lacework URL
       LaceworkSubAccountName:
@@ -27,17 +30,24 @@ Metadata:
         default: Resource Prefix Name
 Parameters:
   # basic
-  AmazonSecurityLakeS3BucketName:
+  AmazonSecurityLakeS3Location:
     Type: String
-    Default: amazon-security-lake
-    Description: "Amazon Security Lake S3 bucket to use. This bucket is provided when you create the Lacework Custom Source in the Amazon Security Lake console."
-    MinLength: '1'
-    AllowedPattern: '[a-zA-Z][a-zA-Z0-9_-]*'
-    ConstraintDescription: "Invalid S3 bucket name."
+    Default: aws-security-lake-region-xxxx/ext/lacework
+    Description: "Amazon Security Lake S3 location to use. This S3 location is provided when you create the Lacework Custom Source in the Amazon Security Lake console. ie. aws-security-lake-region-xxxx/ext/lacework."
+    MinLength: "1"
+    AllowedPattern: '([a-zA-Z0-9-_\/]+)+'
+    ConstraintDescription: "Invalid S3 location."
+  AmazonSecurityLakeRoleArn:
+    Type: String
+    Default: arn:aws:iam::123456789123:role/AmazonSecurityLake-Provider-lacework-region
+    Description: "Amazon Security Lake role to assume when writing to the Amazon Security Lake S3 location. This IAM role is created when you create the Lacework Custom Source in the Amazon Security Lake console. ie. arn:aws:iam::123456789123:role/AmazonSecurityLake-Provider-lacework-us-west-2."
+    MinLength: "1"
+    AllowedPattern: '^arn:aws:iam::\d{12}:role/.+'
+    ConstraintDescription: "Invalid role."
   LaceworkURL:
     Type: String
     Description: "Enter your Lacework URL. ie. account.lacework.net."
-    MinLength: '1'
+    MinLength: "1"
     AllowedPattern: '(.+?)\.lacework\.net'
     ConstraintDescription: "Invalid Lacework URL."
   LaceworkSubAccountName:
@@ -47,14 +57,14 @@ Parameters:
     ConstraintDescription: "Invalid Lacework account name entered. The account name may contain alphanumeric characters and dashes only."
   LaceworkAccessKeyID:
     Type: String
-    MinLength: '1'
+    MinLength: "1"
     AllowedPattern: '^[-a-zA-Z0-9_]*$'
     ConstraintDescription: "The Lacework API Access Key ID contains alphanumeric characters and symbols only."
     Description: "Enter the Lacework API Secret Key ID. See https://support.lacework.com/hc/en-us/articles/360011403853-Generate-API-Access-Keys-and-Tokens."
   LaceworkSecretKey:
     Type: String
     NoEcho: true
-    MinLength: '1'
+    MinLength: "1"
     AllowedPattern: '^[a-zA-Z0-9_]*$'
     ConstraintDescription: "The Lacework API Secret Key contains alphanumeric characters and symbols only."
     Description: "Enter the Lacework API Secret Key. See https://support.lacework.com/hc/en-us/articles/360011403853-Generate-API-Access-Keys-and-Tokens."
@@ -76,44 +86,44 @@ Resources:
   CopyZips:
     Type: Custom::CopyZips
     Properties:
-      ServiceToken: !GetAtt 'CopyZipsFunction.Arn'
-      DestBucket: !Ref 'LambdaZipsBucket'
-      SourceBucket: 'lacework-alliances'
-      Prefix: 'lacework-amazon-security-lake'
+      ServiceToken: !GetAtt "CopyZipsFunction.Arn"
+      DestBucket: !Ref "LambdaZipsBucket"
+      SourceBucket: "lacework-alliances"
+      Prefix: "lacework-amazon-security-lake"
       Objects:
-        - '/lambda/amazon-security-lake.zip'
+        - "/lambda/amazon-security-lake.zip"
 
   CopyZipsRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
       Path: /
       Policies:
         - PolicyName: lambda-copier
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
                   - s3:GetObject
                   - s3:GetObjectTagging
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::lacework-alliances/lacework-amazon-security-lake*'
+                  - !Sub "arn:${AWS::Partition}:s3:::lacework-alliances/lacework-amazon-security-lake*"
               - Effect: Allow
                 Action:
                   - s3:PutObject
                   - s3:DeleteObject
                   - s3:PutObjectTagging
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::${LambdaZipsBucket}/lacework-amazon-security-lake*'
+                  - !Sub "arn:${AWS::Partition}:s3:::${LambdaZipsBucket}/lacework-amazon-security-lake*"
 
   CopyZipsFunction:
     Type: AWS::Lambda::Function
@@ -121,7 +131,7 @@ Resources:
       Description: Copies objects from the S3 bucket to a new location.
       Handler: index.handler
       Runtime: python3.7
-      Role: !GetAtt 'CopyZipsRole.Arn'
+      Role: !GetAtt "CopyZipsRole.Arn"
       Timeout: 240
       Code:
         ZipFile: |
@@ -131,24 +141,24 @@ Resources:
           import boto3
           import cfnresponse
           def copy_objects(source_bucket, dest_bucket, prefix, objects):
-              s3 = boto3.client('s3')
+              s3 = boto3.client("s3")
               for o in objects:
                   key = prefix + o
                   copy_source = {
-                      'Bucket': source_bucket,
-                      'Key': key
+                      "Bucket": source_bucket,
+                      "Key": key
                   }
-                  print('copy_source: %s' % copy_source)
-                  print('dest_bucket = %s'%dest_bucket)
-                  print('key = %s' %key)
+                  print("copy_source: %s" % copy_source)
+                  print("dest_bucket = %s"%dest_bucket)
+                  print("key = %s" %key)
                   s3.copy_object(CopySource=copy_source, Bucket=dest_bucket,
                         Key=key)
           def delete_objects(bucket, prefix, objects):
-              s3 = boto3.client('s3')
-              objects = {'Objects': [{'Key': prefix + o} for o in objects]}
+              s3 = boto3.client("s3")
+              objects = {"Objects": [{"Key": prefix + o} for o in objects]}
               s3.delete_objects(Bucket=bucket, Delete=objects)
           def timeout(event, context):
-              logging.error('Execution is about to time out, sending failure response to CloudFormation')
+              logging.error("Execution is about to time out, sending failure response to CloudFormation")
               cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
           def handler(event, context):
               # make sure we send a failure to CloudFormation if the function
@@ -156,19 +166,19 @@ Resources:
               timer = threading.Timer((context.get_remaining_time_in_millis()
                         / 1000.00) - 0.5, timeout, args=[event, context])
               timer.start()
-              print('Received event: %s' % json.dumps(event))
+              print("Received event: %s" % json.dumps(event))
               status = cfnresponse.SUCCESS
               try:
-                  source_bucket = event['ResourceProperties']['SourceBucket']
-                  dest_bucket = event['ResourceProperties']['DestBucket']
-                  prefix = event['ResourceProperties']['Prefix']
-                  objects = event['ResourceProperties']['Objects']
-                  if event['RequestType'] == 'Delete':
+                  source_bucket = event["ResourceProperties"]["SourceBucket"]
+                  dest_bucket = event["ResourceProperties"]["DestBucket"]
+                  prefix = event["ResourceProperties"]["Prefix"]
+                  objects = event["ResourceProperties"]["Objects"]
+                  if event["RequestType"] == "Delete":
                       delete_objects(dest_bucket, prefix, objects)
                   else:
                       copy_objects(source_bucket, dest_bucket, prefix, objects)
               except Exception as e:
-                  logging.error('Exception: %s' % e, exc_info=True)
+                  logging.error("Exception: %s" % e, exc_info=True)
                   status = cfnresponse.FAILED
               finally:
                   timer.cancel()
@@ -186,7 +196,7 @@ Resources:
     Properties:
       Code:
         S3Bucket: !Ref LambdaZipsBucket
-        S3Key: !Join ['', ['lacework-amazon-security-lake', '/lambda/amazon-security-lake.zip']]
+        S3Key: !Join ["", ["lacework-amazon-security-lake", "/lambda/amazon-security-lake.zip"]]
       Handler: setup
       Runtime: go1.x
       Environment:
@@ -196,14 +206,14 @@ Resources:
           lacework_access_key_id: !Ref LaceworkAccessKeyID
           lacework_secret_key: !Ref LaceworkSecretKey
           event_bus_arn: !GetAtt LaceworkAmazonSecurityLakeEventBus.Arn
-          alert_channel_name: !Join [ "-", ["Lacework-Amazon-Security-Lake", !Select [2, !Split [ "/", !Ref 'AWS::StackId']]]]
+          alert_channel_name: !Join [ "-", ["Lacework-Amazon-Security-Lake", !Select [2, !Split [ "/", !Ref "AWS::StackId"]]]]
       Role: !GetAtt LaceworkAmazonSecurityLakeSetupFunctionRole.Arn
 
   LaceworkAmazonSecurityLakeSetupFunctionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -211,7 +221,7 @@ Resources:
             Action: sts:AssumeRole
       Path: /
       ManagedPolicyArns:
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 
   LaceworkAmazonSecurityLakeSetup: # this will launch the setup function
     Type: AWS::CloudFormation::CustomResource
@@ -222,7 +232,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -230,32 +240,30 @@ Resources:
             Action: sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: AWS_AmazonSecurityLake_Operations
+        - PolicyName: AssumeSecurityLakeOperations
           PolicyDocument:
             Version: 2012-10-17
             Statement:
-              - Sid: AmazonSecurityLakeReadBucket
-                Effect: Allow
-                Action:
-                  - s3:ListBucket
-                  - s3:GetBucketLocation
-                Resource:
-                  - !Sub 'arn:aws:s3:::${AmazonSecurityLakeS3BucketName}'
-                  - !Sub 'arn:aws:s3:::${AmazonSecurityLakeCacheS3Bucket}'
-              - Sid: AmazonSecurityLakeWrite
-                Effect: Allow
-                Action:
-                  - s3:PutObject
-                  - s3:PutObjectAcl
-                  - s3:GetObject
-                  - s3:GetObjectAcl
-                  - s3:DeleteObject
-                  - s3:GetObjectAttributes
-                Resource:
-                  - !Sub 'arn:aws:s3:::${AmazonSecurityLakeS3BucketName}/*'
-                  - !Sub 'arn:aws:s3:::${AmazonSecurityLakeCacheS3Bucket}/*'
+            - Sid: AssumeSecurityLakeRole
+              Effect: Allow
+              Action:
+                - sts:AssumeRole
+              Resource:
+                !Ref AmazonSecurityLakeRoleArn
+            - Sid: AmazonSecurityLakeCacheListAllObjects
+              Effect: Allow
+              Action:
+                - s3:ListBucket
+              Resource:
+                - !Sub 'arn:aws:s3:::${AmazonSecurityLakeCacheS3Bucket}'
+            - Sid: AmazonSecurityLakeCacheAllObjectActions
+              Effect: Allow
+              Action:
+                - s3:*Object
+              Resource:
+                - !Sub 'arn:aws:s3:::${AmazonSecurityLakeCacheS3Bucket}/*'
       ManagedPolicyArns:
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole'
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"
 
   LaceworkAmazonSecurityLakeEventFunction:
     Type: AWS::Lambda::Function
@@ -264,7 +272,7 @@ Resources:
     Properties:
       Code:
         S3Bucket: !Ref LambdaZipsBucket
-        S3Key: !Join ['', ['lacework-amazon-security-lake', '/lambda/amazon-security-lake.zip']]
+        S3Key: !Join ["", ["lacework-amazon-security-lake", "/lambda/amazon-security-lake.zip"]]
       Handler: main
       MemorySize: 256
       Timeout: 30
@@ -272,14 +280,15 @@ Resources:
       Environment:
         Variables:
           lacework_url: !Ref LaceworkURL
-          amazon_security_lake_s3_bucket_name: !Ref AmazonSecurityLakeS3BucketName
+          amazon_security_lake_s3_location: !Ref AmazonSecurityLakeS3Location
           amazon_security_lake_cache_s3_bucket_name: !Ref AmazonSecurityLakeCacheS3Bucket
+          amazon_security_lake_role_arn: !Ref AmazonSecurityLakeRoleArn
       Role: !GetAtt LaceworkAmazonSecurityLakeEventFunctionRole.Arn
 
   LaceworkAmazonSecurityLakeEventBus:
     Type: AWS::Events::EventBus
     Properties:
-      Name: !Join ['', [!Ref ResourcePrefixName, '-Event-Bus']]
+      Name: !Join ["", [!Ref ResourcePrefixName, "-Event-Bus"]]
 
   LaceworkAmazonSecurityLakeEventBusPolicy:
     Type: AWS::Events::EventBusPolicy
@@ -294,13 +303,13 @@ Resources:
         Resource: !GetAtt LaceworkAmazonSecurityLakeEventBus.Arn
 
   LaceworkAmazonSecurityLakeEventsRule:
-    Type: 'AWS::Events::Rule'
+    Type: "AWS::Events::Rule"
     Properties:
       Description: "Captures Lacework Security Events"
       EventBusName: !GetAtt LaceworkAmazonSecurityLakeEventBus.Name
       EventPattern:
         account: ["434813966438"]
-      Name: !Join ['', [!Ref ResourcePrefixName, '-Event-Rule']]
+      Name: !Join ["", [!Ref ResourcePrefixName, "-Event-Rule"]]
       State: ENABLED
       Targets:
         - Arn: !GetAtt LaceworkAmazonSecurityLakeQueue.Arn
@@ -320,9 +329,9 @@ Resources:
         - !Ref LaceworkAmazonSecurityLakeQueue
 
   LaceworkAmazonSecurityLakeQueue:
-    Type: 'AWS::SQS::Queue'
+    Type: "AWS::SQS::Queue"
     Properties:
-      QueueName: !Join ['', [!Ref ResourcePrefixName, '-Event-Queue']]
+      QueueName: !Join ["", [!Ref ResourcePrefixName, "-Event-Queue"]]
       DelaySeconds: 0
       MessageRetentionPeriod: 86400
 

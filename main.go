@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	lam "github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	awss3 "github.com/aws/aws-sdk-go/service/s3"
 	"github.com/jefferyfry/funclog"
@@ -36,8 +38,9 @@ const (
 var (
 	instance                  string
 	telemetry                 bool
-	securityLakeS3Bucket      string
+	securityLakeS3Location    string
 	securityLakeCacheS3Bucket string
+	securityLakeRoleArn       string
 	LogI                      = funclog.NewInfoLogger("INFO: ")
 	LogW                      = funclog.NewInfoLogger("WARN: ")
 	LogE                      = funclog.NewErrorLogger("ERROR: ")
@@ -53,13 +56,17 @@ func init() {
 	} else {
 		telemetry = true
 	}
-	securityLakeS3Bucket = os.Getenv("amazon_security_lake_s3_bucket_name")
+	securityLakeS3Location = os.Getenv("amazon_security_lake_s3_location")
 	if instance == "" {
-		fmt.Println("Please set the environment variable amazon_security_lake_s3_bucket_name")
+		fmt.Println("Please set the environment variable amazon_security_lake_s3_location")
 	}
 	securityLakeCacheS3Bucket = os.Getenv("amazon_security_lake_cache_s3_bucket_name")
 	if instance == "" {
 		fmt.Println("Please set the environment variable amazon_security_lake_cache_s3_bucket_name")
+	}
+	securityLakeRoleArn = os.Getenv("amazon_security_lake_role_arn")
+	if instance == "" {
+		fmt.Println("Please set the environment variable amazon_security_lake_role_arn")
 	}
 }
 
@@ -150,7 +157,7 @@ func handler(ctx context.Context, e events.SQSEvent) {
 }
 
 func cacheExpired(bucket string, t time.Time) (bool, error) {
-	svc := awss3.New(session.New())
+	svc := awss3.New(session.Must(session.NewSession()))
 	input := &awss3.HeadObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(CACHEKEY),
@@ -205,7 +212,7 @@ func addToExistingCache(fs []ocsf.SecurityFinding, lastEventTime time.Time) erro
 }
 
 func getCacheFindings() ([]ocsf.SecurityFinding, time.Time, error) {
-	svc := awss3.New(session.New())
+	svc := awss3.New(session.Must(session.NewSession()))
 	input := &awss3.GetObjectInput{
 		Bucket: aws.String(securityLakeCacheS3Bucket),
 		Key:    aws.String(CACHEKEY),
@@ -242,7 +249,7 @@ func getCacheFindings() ([]ocsf.SecurityFinding, time.Time, error) {
 }
 
 func deleteCache() error {
-	svc := awss3.New(session.New())
+	svc := awss3.New(session.Must(session.NewSession()))
 	input := &awss3.DeleteObjectInput{
 		Bucket: aws.String(securityLakeCacheS3Bucket),
 		Key:    aws.String(CACHEKEY),
@@ -262,7 +269,7 @@ func writeToNewCache(fs []ocsf.SecurityFinding, lastEventTime time.Time) error {
 		LogW.Println("Unable to write to cache ", securityLakeCacheS3Bucket, err)
 		return err
 	}
-	svc := awss3.New(session.New())
+	svc := awss3.New(session.Must(session.NewSession()))
 	marshTime, marshErr := lastEventTime.MarshalText()
 	if marshErr != nil {
 		LogW.Println("Unable to marshal the event time ", lastEventTime, marshErr)
@@ -285,7 +292,7 @@ func writeToNewCache(fs []ocsf.SecurityFinding, lastEventTime time.Time) error {
 }
 
 func cacheExists(bucket string) (bool, error) {
-	svc := awss3.New(session.New())
+	svc := awss3.New(session.Must(session.NewSession()))
 	input := &awss3.HeadObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(CACHEKEY),
@@ -317,18 +324,30 @@ func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.Secu
 	lc, _ := lambdacontext.FromContext(ctx)
 	region := strings.Split(lc.InvokedFunctionArn, ":")[3]
 	account := strings.Split(lc.InvokedFunctionArn, ":")[4]
-	objectKey := fmt.Sprintf("region=%s/AWS_account=%s/eventDay=%s/%s.zstd.parquet", region, account, createTime.Format("2006010215"), createTime.Format(time.RFC3339))
+
+	bucket, path, fnd := strings.Cut(securityLakeS3Location, "/")
+
+	if fnd == false {
+		LogE.Println("Check Amazon Security Lake S3 location.", securityLakeS3Location)
+		return errors.New("check Amazon Security Lake S3 location")
+	}
+
+	objectKey := fmt.Sprintf("%s/region=%s/AWS_account=%s/eventDay=%s/%s.zstd.parquet", path, region, account, createTime.Format("2006010215"), createTime.Format(time.RFC3339))
+
+	//assume role
+	sess := session.Must(session.NewSession())
+	creds := stscreds.NewCredentials(sess, securityLakeRoleArn)
 
 	// create new S3 file writer
-	fw, err := s3.NewS3FileWriter(ctx, securityLakeS3Bucket, objectKey, "bucket-owner-full-control", nil)
+	fw, err := s3.NewS3FileWriter(ctx, bucket, objectKey, "bucket-owner-full-control", nil, &aws.Config{Credentials: creds})
 	if err != nil {
-		LogE.Println("Can't open S3 file for write", securityLakeS3Bucket, objectKey, err)
+		LogE.Println("Can't open S3 file for write", bucket, objectKey, err)
 		return err
 	}
 	// create new parquet file writer
 	pw, err := writer.NewParquetWriter(fw, new(ocsf.SecurityFinding), 4)
 	if err != nil {
-		LogW.Println("Can't open parquet write for S3 file", securityLakeS3Bucket, objectKey, err)
+		LogW.Println("Can't open parquet write for S3 file", securityLakeS3Location, objectKey, err)
 		return err
 	}
 	pw.CompressionType = parquet.CompressionCodec_ZSTD
@@ -338,19 +357,19 @@ func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.Secu
 		s, _ := json.MarshalIndent(finding, "", "\t")
 		LogI.Printf("Writing security finding %s", string(s))
 		if err := pw.Write(finding); err != nil {
-			LogW.Println("Can't write finding", securityLakeS3Bucket, objectKey, err)
+			LogW.Println("Can't write finding", bucket, objectKey, err)
 			return err
 		}
 	}
 	// write parquet file footer
 	if err := pw.WriteStop(); err != nil {
-		LogW.Println("WriteStop err", securityLakeS3Bucket, objectKey, err)
+		LogW.Println("WriteStop err", bucket, objectKey, err)
 		return err
 	}
 
 	err = fw.Close()
 	if err != nil {
-		LogW.Println("Error closing S3 file writer", securityLakeS3Bucket, objectKey, err)
+		LogW.Println("Error closing S3 file writer", bucket, objectKey, err)
 		return err
 	}
 	LogI.Println("Write Finished")
