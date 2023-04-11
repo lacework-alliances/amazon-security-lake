@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/cfn"
 	lam "github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	awss3 "github.com/aws/aws-sdk-go/service/s3"
 	"github.com/jefferyfry/funclog"
 	"github.com/lacework-alliances/amazon-security-lake/internal/honeycomb"
 	"net/http"
@@ -197,7 +200,20 @@ func delete(ctx context.Context, event cfn.Event) (physicalResourceID string, da
 	accessKeyId := os.Getenv("lacework_access_key_id")
 	secretKey := os.Getenv("lacework_secret_key")
 	alertChannelName := os.Getenv("alert_channel_name")
+	securityLakeCacheS3Bucket := os.Getenv("amazon_security_lake_cache_s3_bucket_name")
 	honeycomb.SendHoneycombEvent(strings.Split(laceworkUrl, ".")[0], "delete started", subAccountName, SBUILD, "{}", "{}", SDATASET, SHONEYKEY)
+
+	//empty the cache bucket
+	svc := awss3.New(session.Must(session.NewSession()))
+	input := &awss3.DeleteObjectInput{
+		Bucket: aws.String(securityLakeCacheS3Bucket),
+		Key:    aws.String("LaceworkSecurityFindingsCache"),
+	}
+
+	_, deleteErr := svc.DeleteObject(input)
+	if deleteErr != nil {
+		LogWSetup.Println("Unable to delete cache!", securityLakeCacheS3Bucket, deleteErr.Error())
+	}
 
 	if accessToken, err := createAccessToken(laceworkUrl, accessKeyId, secretKey); err == nil {
 		if intgGuid, err := searchAlertChannels(alertChannelName, laceworkUrl, accessToken, subAccountName); err == nil {

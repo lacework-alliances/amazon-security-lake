@@ -207,6 +207,7 @@ Resources:
           lacework_secret_key: !Ref LaceworkSecretKey
           event_bus_arn: !GetAtt LaceworkAmazonSecurityLakeEventBus.Arn
           alert_channel_name: !Join [ "-", ["Lacework-Amazon-Security-Lake", !Select [2, !Split [ "/", !Ref "AWS::StackId"]]]]
+          amazon_security_lake_cache_s3_bucket_name: !Ref AmazonSecurityLakeCacheS3Bucket
       Role: !GetAtt LaceworkAmazonSecurityLakeSetupFunctionRole.Arn
 
   LaceworkAmazonSecurityLakeSetupFunctionRole:
@@ -220,6 +221,23 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       Path: /
+      Policies:
+        - PolicyName: SecurityLakeCacheOperations
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: AmazonSecurityLakeCacheListAllObjects
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource:
+                  - !Sub 'arn:aws:s3:::${AmazonSecurityLakeCacheS3Bucket}'
+              - Sid: AmazonSecurityLakeCacheAllObjectActions
+                Effect: Allow
+                Action:
+                  - s3:*Object
+                Resource:
+                  - !Sub 'arn:aws:s3:::${AmazonSecurityLakeCacheS3Bucket}/*'
       ManagedPolicyArns:
         - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 
