@@ -332,7 +332,7 @@ func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.Secu
 		return errors.New("check Amazon Security Lake S3 location")
 	}
 
-	objectKey := fmt.Sprintf("%s/region=%s/AWS_account=%s/eventDay=%s/%s.zstd.parquet", path, region, account, createTime.Format("2006010215"), createTime.Format(time.RFC3339))
+	objectKey := fmt.Sprintf("%s/region=%s/AWS_account=%s/eventDay=%s/%s.zstd.parquet", path, region, account, createTime.Format("20060102"), createTime.Format(time.RFC3339))
 
 	//assume role
 	sess := session.Must(session.NewSession())
