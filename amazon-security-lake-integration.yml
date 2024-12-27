@@ -197,10 +197,11 @@ Resources:
       Code:
         S3Bucket: !Ref LambdaZipsBucket
         S3Key: !Join ["", ["lacework-amazon-security-lake", "/lambda/amazon-security-lake.zip"]]
-      Handler: setup
+      Handler: bootstrap
       Runtime: provided.al2023
       Environment:
         Variables:
+          MODE: setup
           lacework_url: !Ref LaceworkURL
           lacework_sub_account_name: !Ref LaceworkSubAccountName
           lacework_access_key_id: !Ref LaceworkAccessKeyID
@@ -291,12 +292,13 @@ Resources:
       Code:
         S3Bucket: !Ref LambdaZipsBucket
         S3Key: !Join ["", ["lacework-amazon-security-lake", "/lambda/amazon-security-lake.zip"]]
-      Handler: main
+      Handler: bootstrap
       MemorySize: 256
       Timeout: 30
       Runtime: provided.al2023
       Environment:
         Variables:
+          MODE: main
           lacework_url: !Ref LaceworkURL
           amazon_security_lake_s3_location: !Ref AmazonSecurityLakeS3Location
           amazon_security_lake_cache_s3_bucket_name: !Ref AmazonSecurityLakeCacheS3Bucket
