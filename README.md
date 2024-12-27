@@ -1,6 +1,6 @@
 # AWS Moose
+![Fortinet-logo-rgb-black-red](https://github.com/user-attachments/assets/99c6a147-2abf-4a32-bf43-a565ca839754)
 
-![Lacework](https://user-images.githubusercontent.com/6440106/152378397-90c862e9-19fb-4427-96d0-02ca6c87f4dd.png)
 
 ## Overview
 Lacework can integrate with AWS Moose, a security data lake that is based on the [OCSF standard](https://schema.ocsf.io/).
