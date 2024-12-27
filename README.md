@@ -21,7 +21,7 @@ CloudFormation is used to set up the Lacework integration with AWS Moose. The Cl
 
 1. Click on the following Launch Stack button to go to your CloudFormation console and launch the template.
 
-   [![Launch](https://user-images.githubusercontent.com/6440106/153987820-e1f32423-1e69-416d-8bca-2ee3a1e85df1.png)](https://console.aws.amazon.com/cloudformation/home?#/stacks/create/review?templateURL=https://lacework-alliances.s3.us-west-2.amazonaws.com/lacework-moose/templates/moose-integration.yml)
+   [![Launch](https://user-images.githubusercontent.com/6440106/153987820-e1f32423-1e69-416d-8bca-2ee3a1e85df1.png)](https://console.aws.amazon.com/cloudformation/home?#/stacks/create/review?templateURL=https://lacework-alliances.s3.us-west-2.amazonaws.com/lacework-amazon-security-lake/templates/amazon-security-lake-integration.yml)
 
    For most deployments, you only need the Basic Configuration parameters.
    ![basic](https://user-images.githubusercontent.com/6440106/200466378-c7940e9a-128a-40c3-8281-03cadea31561.png)
