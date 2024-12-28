@@ -7,7 +7,7 @@ Lacework can integrate with AWS Moose, a security data lake that is based on the
 Lacework integrates as a data source and provides our real-time security findings. These security findings include software and infrastructure-as-code (IaC) vulnerabilities, cloud resource security misconfigurations, and known and unknown security threat behaviors.
 
 ## Architecture
-![moose](https://user-images.githubusercontent.com/6440106/200464957-6fd1df7d-e3ed-4e86-994b-60dd0bc0dbc0.png)
+![moose](https://github.com/user-attachments/assets/536cf7f9-6f53-4e9a-9112-6cc4db95f4bb)
 
 ## CloudFormation Deployment
 CloudFormation is used to set up the Lacework integration with AWS Moose. The CloudFormation template creates the EventBridge rules, IAM permissions, SNS topic, SQS queue, Lambda event transformation function and the Lacework outbound security alert channel.
