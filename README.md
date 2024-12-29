@@ -44,11 +44,11 @@ CloudFormation is used to set up the Lacework integration with Security Lake. Th
 Troubleshooting this integration can be done by monitoring the CloudWatch logs for two Lambda functions. One Lambda function is responsible for some of the initial setup during the CloudFormation deployment. The second Lambda function transforms Lacework security alerts to the OCSF security findings for Security Lake.
 
 #### Initial Setup Troubleshooting
-Some initial set up during the CloudFormation deployment is handled by a Lambda function _stack-name_-LaceworkMooseSetupFunction-_xxxx_. Specifically, it configures the Alert Channel and Alert Rules that are required to send Lacework Security Alerts to the second Lambda function for transformation into OCSF and AWS Moose.
+Some initial set up during the CloudFormation deployment is handled by a Lambda function _stack-name_-LaceworkAmazonSecurityLakeSetupFunction-_xxxx_. Specifically, it configures the Alert Channel and Alert Rules that are required to send Lacework Security Alerts to the second Lambda function for transformation into OCSF and Amazon Security Lake.
 To investigate any issues, use the following steps:
 
 1. Go to Lambda in your AWS management console.
-2. Find the Lambda function with the name _stack-name_-LaceworkAmazonSecurityLakeSetup-_xxxx_.
+2. Find the Lambda function with the name _stack-name_-LaceworkAmazonSecurityLakeSetupFunction-_xxxx_.
 3. Click the **Monitor** tab.
 4. Click the button **View logs in CloudWatch** to launch CloudWatch into a new tab.
 5. View the **Log stream** debug for errors.
@@ -57,11 +57,11 @@ To investigate any issues, use the following steps:
 
 
 #### Security Findings Event Troubleshooting
-If there are issues with FortiCNAPP Security Alerts being transformed to OCSF and AWS Moose, investigate the Lambda function _stack-name_-AmazonSecurityLakeEventFunction-_xxxx_. It transforms Lacework Security alerts into OCSF Security Findings format and delivers these in Parquet file format to the AWS Moose S3 bucket.
+If there are issues with FortiCNAPP Security Alerts being transformed to OCSF and Amazon Security Lake, investigate the Lambda function _stack-name_-LaceworkAmazonSecurityLakeEventFunction-_xxxx_. It transforms Lacework Security alerts into OCSF Security Findings format and delivers these in Parquet file format to the Security Lake S3 bucket.
 To investigate any issues, use the following steps:
 
 1. Go to Lambda in your AWS management console.
-2. Find the Lambda function with the name _stack-name_-AmazonSecurityLakeEventFunction-_xxxx_.
+2. Find the Lambda function with the name _stack-name_-LaceworkAmazonSecurityLakeEventFunction-_xxxx_.
 3. Click the **Monitor** tab.
 4. Click the button **View logs in CloudWatch** to launch CloudWatch into a new tab.
 5. View the **Log stream** debug for errors.
