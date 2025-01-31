@@ -360,70 +360,138 @@ func cacheExists(bucket string) (bool, error) {
 
 
 func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.SecurityFinding, createTime time.Time) error {
-	lc, _ := lambdacontext.FromContext(ctx)
-	region := strings.Split(lc.InvokedFunctionArn, ":")[3]
-	account := strings.Split(lc.InvokedFunctionArn, ":")[4]
+    // Capture Lambda context details
+    LogI.Println("This should appear in stdout")
+    os.Stdout.Sync() // Ensure flushing
+    lc, _ := lambdacontext.FromContext(ctx)
+    region := strings.Split(lc.InvokedFunctionArn, ":")[3]
+    account := strings.Split(lc.InvokedFunctionArn, ":")[4]
 
-	bucket, path, fnd := strings.Cut(securityLakeS3Location, "/")
-
-	if fnd == false {
-		LogE.Println("Check Amazon Security Lake S3 location.", securityLakeS3Location)
-		return errors.New("check Amazon Security Lake S3 location")
-	}
-
-	objectKey := fmt.Sprintf("%s/region=%s/AWS_account=%s/eventDay=%s/%s.zstd.parquet", path, region, account, createTime.Format("20060102"), createTime.Format(time.RFC3339))
-
-	// Retrieve the external ID from environment variables
-    securityLakeRoleExternalId := os.Getenv("amazon_security_lake_role_eid")
-    if securityLakeRoleExternalId == "" {
-        LogE.Println("External ID is not set in environment variables")
-        return errors.New("external ID is not set in environment variables")
+    // Validate S3 location
+    bucket, path, fnd := strings.Cut(securityLakeS3Location, "/")
+    if !fnd {
+        LogE.Println("Invalid Amazon Security Lake S3 location", securityLakeS3Location)
+        return errors.New("invalid Security Lake S3 location")
     }
 
-    LogE.Println("ExternalID: ", securityLakeRoleExternalId)
+    // Construct object key with detailed path
+    objectKey := fmt.Sprintf("%s/region=%s/AWS_account=%s/eventDay=%s/%s.zstd.parquet", 
+        path, region, account, createTime.Format("20060102"), createTime.Format(time.RFC3339))
 
-    // Assume role with external ID
-    sess := session.Must(session.NewSession())
-    creds := stscreds.NewCredentials(sess, securityLakeRoleArn, func(p *stscreds.AssumeRoleProvider) {
-        p.ExternalID = aws.String(securityLakeRoleExternalId) // Pass the external ID to AssumeRoleProvider
+    // Validate external ID
+    LogI.Println("Validate external ID")
+    securityLakeRoleExternalId := os.Getenv("amazon_security_lake_role_eid")
+    if securityLakeRoleExternalId == "" {
+        LogE.Println("Missing external ID for role assumption")
+        return errors.New("external ID not configured")
+    }
+
+    // Detailed role assumption logging
+    LogI.Printf("Role Assumption Details:")
+    LogI.Printf("- Target Role ARN: %s", securityLakeRoleArn)
+    LogI.Printf("- AWS Account: %s", account)
+    LogI.Printf("- Region: %s", region)
+    LogI.Printf("- External ID: %s (masked)", maskExternalID(securityLakeRoleExternalId))
+    os.Stdout.Sync()
+
+    // Create AWS session
+    sess := session.Must(session.NewSession(&aws.Config{
+        Region: aws.String(region),
+    }))
+
+    // Assume role with detailed credential logging
+    LogI.Println("Testing log statement before AssumeRole")
+    creds, err := assumeRoleWithLogging(sess, securityLakeRoleArn, securityLakeRoleExternalId)
+    if err != nil {
+        LogE.Printf("Role assumption failed: %v", err)
+        os.Stderr.Sync() // Sync for ERROR-level logs
+        return fmt.Errorf("role assumption error: %w", err)
+    }
+
+    // S3 file write logging preparation
+    LogI.Printf("S3 Write Configuration:")
+    LogI.Printf("- Bucket: %s", bucket)
+    LogI.Printf("- Object Key: %s", objectKey)
+    LogI.Printf("- Findings Count: %d", len(findings))
+    os.Stdout.Sync()
+
+    // Create S3 file writer
+    fw, err := s3.NewS3FileWriter(ctx, bucket, objectKey, "bucket-owner-full-control", nil, &aws.Config{
+        Credentials: creds,
+        Region:      aws.String(region),
     })
+    if err != nil {
+        LogE.Printf("S3 File Writer Creation Failed: %v", err)
+        os.Stderr.Sync() // Sync for ERROR-level logs
+        return fmt.Errorf("s3 writer error: %w", err)
+    }
+    defer fw.Close()
 
-	// create new S3 file writer
-	fw, err := s3.NewS3FileWriter(ctx, bucket, objectKey, "bucket-owner-full-control", nil, &aws.Config{Credentials: creds})
-	if err != nil {
-		LogE.Println("Can't open S3 file for write", bucket, objectKey, err)
-		return err
-	}
-	// create new parquet file writer
-	pw, err := writer.NewParquetWriter(fw, new(ocsf.SecurityFinding), 4)
-	if err != nil {
-		LogW.Println("Can't open parquet write for S3 file", securityLakeS3Location, objectKey, err)
-		return err
-	}
-	pw.CompressionType = parquet.CompressionCodec_ZSTD
+    // Parquet writer setup
+    pw, err := writer.NewParquetWriter(fw, new(ocsf.SecurityFinding), 4)
+    if err != nil {
+        LogE.Printf("Parquet Writer Creation Failed: %v", err)
+        os.Stderr.Sync() // Sync for ERROR-level logs
+        return fmt.Errorf("parquet writer error: %w", err)
+    }
+    pw.CompressionType = parquet.CompressionCodec_ZSTD
 
-	LogI.Println("Writing findings", CACHEKEY, len(findings))
-	for _, finding := range findings {
-		s, _ := json.MarshalIndent(finding, "", "\t")
-		LogI.Printf("Writing security finding %s", string(s))
-		if err := pw.Write(finding); err != nil {
-			LogW.Println("Can't write finding", bucket, objectKey, err)
-			return err
-		}
-	}
-	// write parquet file footer
-	if err := pw.WriteStop(); err != nil {
-		LogW.Println("WriteStop err", bucket, objectKey, err)
-		return err
-	}
+    // Write findings with error tracking
+    var writtenCount int
+    for _, finding := range findings {
+        if err := pw.Write(finding); err != nil {
+            LogE.Printf("Finding Write Error: %v", err)
+            os.Stderr.Sync() // Sync for ERROR-level logs
+            return fmt.Errorf("finding write error: %w", err)
+        }
+        writtenCount++
+    }
 
-	err = fw.Close()
-	if err != nil {
-		LogW.Println("Error closing S3 file writer", bucket, objectKey, err)
-		return err
-	}
-	LogI.Println("Write Finished")
-	return nil
+    // Finalize parquet file
+    if err := pw.WriteStop(); err != nil {
+        LogE.Printf("Parquet Write Finalization Error: %v", err)
+        os.Stderr.Sync() // Sync for ERROR-level logs
+        return fmt.Errorf("parquet finalization error: %w", err)
+    }
+
+    LogI.Printf("S3 Write Completed Successfully:")
+    LogI.Printf("- Total Findings Written: %d", writtenCount)
+    
+    return nil
+}
+
+// Helper function for role assumption with logging
+func assumeRoleWithLogging(sess *session.Session, roleArn, externalID string) (*credentials.Credentials, error) {
+    stsClient := sts.New(sess)
+    
+    input := &sts.AssumeRoleInput{
+        RoleArn:         aws.String(roleArn),
+        RoleSessionName: aws.String("SecurityLakeAssumeRole"),
+        ExternalId:      aws.String(externalID),
+    }
+
+    result, err := stsClient.AssumeRole(input)
+    if err != nil {
+        LogE.Printf("STS AssumeRole Failed: %v", err)
+        return nil, err
+    }
+
+    LogI.Printf("Role Assumed Successfully:")
+    LogI.Printf("- Session Duration: %v", result.Credentials.Expiration.Sub(time.Now()))
+
+    return credentials.NewStaticCredentials(
+        *result.Credentials.AccessKeyId, 
+        *result.Credentials.SecretAccessKey, 
+        *result.Credentials.SessionToken,
+    ), nil
+}
+
+// Mask external ID for logging security
+func maskExternalID(id string) string {
+    if len(id) <= 4 {
+        return "****"
+    }
+    return id[:2] + "**" + id[len(id)-2:]
 }
 
 
