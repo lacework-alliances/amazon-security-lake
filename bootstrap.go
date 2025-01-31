@@ -26,6 +26,7 @@ import (
 	"github.com/xitongsys/parquet-go/parquet"
 	"github.com/xitongsys/parquet-go/writer"
 	"github.com/jefferyfry/funclog"
+	//"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/lacework-alliances/amazon-security-lake/internal/findings"
 	"github.com/lacework-alliances/amazon-security-lake/internal/honeycomb"
 	"github.com/lacework-alliances/amazon-security-lake/pkg/lacework"
@@ -53,6 +54,7 @@ var (
 	securityLakeS3Location    string
 	securityLakeCacheS3Bucket string
 	securityLakeRoleArn       string
+	securityLakeRoleExternalId	string
 )
 
 // Main entry point
@@ -100,6 +102,11 @@ func runMain() {
 	securityLakeRoleArn = os.Getenv("amazon_security_lake_role_arn")
 	if instance == "" {
 		fmt.Println("Please set the environment variable amazon_security_lake_role_arn")
+		return
+	}
+	securityLakeRoleExternalId = os.Getenv("amazon_security_lake_role_eid")
+	if instance == "" {
+		fmt.Println("Please set the environment variable amazon_security_lake_role_eid")
 		return
 	}
 
@@ -351,6 +358,7 @@ func cacheExists(bucket string) (bool, error) {
 	}
 }
 
+
 func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.SecurityFinding, createTime time.Time) error {
 	lc, _ := lambdacontext.FromContext(ctx)
 	region := strings.Split(lc.InvokedFunctionArn, ":")[3]
@@ -365,9 +373,20 @@ func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.Secu
 
 	objectKey := fmt.Sprintf("%s/region=%s/AWS_account=%s/eventDay=%s/%s.zstd.parquet", path, region, account, createTime.Format("20060102"), createTime.Format(time.RFC3339))
 
-	//assume role
-	sess := session.Must(session.NewSession())
-	creds := stscreds.NewCredentials(sess, securityLakeRoleArn)
+	// Retrieve the external ID from environment variables
+    securityLakeRoleExternalId := os.Getenv("amazon_security_lake_role_eid")
+    if securityLakeRoleExternalId == "" {
+        LogE.Println("External ID is not set in environment variables")
+        return errors.New("external ID is not set in environment variables")
+    }
+
+    LogE.Println("ExternalID: ", securityLakeRoleExternalId)
+
+    // Assume role with external ID
+    sess := session.Must(session.NewSession())
+    creds := stscreds.NewCredentials(sess, securityLakeRoleArn, func(p *stscreds.AssumeRoleProvider) {
+        p.ExternalID = aws.String(securityLakeRoleExternalId) // Pass the external ID to AssumeRoleProvider
+    })
 
 	// create new S3 file writer
 	fw, err := s3.NewS3FileWriter(ctx, bucket, objectKey, "bucket-owner-full-control", nil, &aws.Config{Credentials: creds})
@@ -912,4 +931,3 @@ func sendApiDeleteRequest(laceworkUrl string, api string, accessToken string, su
 
 	return http.DefaultClient.Do(request)
 }
-
