@@ -8,6 +8,7 @@ Metadata:
         Parameters:
           - AmazonSecurityLakeS3Location
           - AmazonSecurityLakeRoleArn
+          - AmazonSecurityLakeRoleExternalID
           - LaceworkURL
           - LaceworkSubAccountName
           - LaceworkAccessKeyID
@@ -18,6 +19,8 @@ Metadata:
         default: Amazon Security Lake S3 Location
       AmazonSecurityLakeRoleArn:
         default: Amazon Security Lake Role ARN
+      AmazonSecurityLakeRoleExternalID:
+        default: Amazon Security Lake Role External ID
       LaceworkURL:
         default: Your Lacework URL
       LaceworkSubAccountName:
@@ -44,6 +47,13 @@ Parameters:
     MinLength: "1"
     AllowedPattern: '^arn:aws:iam::\d{12}:role/.+'
     ConstraintDescription: "Invalid role."
+  AmazonSecurityLakeRoleExternalID:
+    Description: External ID for assuming the AmazonSecurityLakeRole
+    Type: String
+    MinLength: 1
+    MaxLength: 256
+    AllowedPattern: '^[a-zA-Z0-9-_:]*$'
+    ConstraintDescription: "External ID must be alphanumeric and can include hyphens."
   LaceworkURL:
     Type: String
     Description: "Enter your Lacework URL. ie. account.lacework.net."
@@ -303,6 +313,7 @@ Resources:
           amazon_security_lake_s3_location: !Ref AmazonSecurityLakeS3Location
           amazon_security_lake_cache_s3_bucket_name: !Ref AmazonSecurityLakeCacheS3Bucket
           amazon_security_lake_role_arn: !Ref AmazonSecurityLakeRoleArn
+          amazon_security_lake_role_eid: !Ref AmazonSecurityLakeRoleExternalID
       Role: !GetAtt LaceworkAmazonSecurityLakeEventFunctionRole.Arn
 
   LaceworkAmazonSecurityLakeEventBus:
