@@ -390,12 +390,14 @@ func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.Secu
 
     // Log External ID for Debugging (Masking for Security)
     LogI.Printf("Retrieved External ID: %s (masked)", maskExternalID(securityLakeRoleExternalId))
+    fmt.Printf("Retrieved External ID: %s (masked)", maskExternalID(securityLakeRoleExternalId))
 
     // Create AWS Session
     sess := session.Must(session.NewSession(&aws.Config{
         Region: aws.String(os.Getenv("AWS_REGION")),
     }))
     LogI.Printf("AWS Session created in region: %s", os.Getenv("AWS_REGION"))
+    fmt.Printf("AWS Session created in region: %s", os.Getenv("AWS_REGION"))
 
     // Create STS Client
     stsClient := sts.New(sess)
@@ -410,6 +412,7 @@ func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.Secu
     // Log AssumeRole Input
     assumeRoleInputJson, _ := json.MarshalIndent(assumeRoleInput, "", "  ")
     LogI.Printf("AssumeRole Request: %s", string(assumeRoleInputJson))
+    fmt.Printf("AssumeRole Request: %s", string(assumeRoleInputJson))
 
     // Call AssumeRole
     roleOutput, err := stsClient.AssumeRole(assumeRoleInput)
@@ -431,6 +434,8 @@ func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.Secu
 
     // Log Successful AssumeRole Response
     LogI.Printf("Assumed Role Successfully. Temporary Credentials: AccessKeyId=%s, Expiration=%v",
+        *roleOutput.Credentials.AccessKeyId, roleOutput.Credentials.Expiration)
+    fmt.Printf("Assumed Role Successfully. Temporary Credentials: AccessKeyId=%s, Expiration=%v",
         *roleOutput.Credentials.AccessKeyId, roleOutput.Credentials.Expiration)
 
     // create new S3 file writer
