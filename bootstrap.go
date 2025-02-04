@@ -185,6 +185,7 @@ func handler(ctx context.Context, e events.SQSEvent) {
                     return
                 }
             }
+        //if len(currFs) > 0 {
         } else {
             writeCacheErr := writeToNewCache(currFs, event.Time)
             if writeCacheErr != nil {
@@ -222,7 +223,9 @@ func cacheExpired(bucket string, t time.Time) (bool, error) {
     }
 
     elapsed := t.Sub(cacheTimeTime)
-    if elapsed.Minutes() > 5 && aws.Int64Value(head.ContentLength) > 256000000 {
+    //Speed up cache timeout for unit tests
+    //if elapsed.Minutes() > 5 && aws.Int64Value(head.ContentLength) > 256000000 {
+    if elapsed.Minutes() > 5 {
         return true, nil
     }
 
