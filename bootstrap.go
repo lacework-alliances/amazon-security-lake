@@ -452,10 +452,10 @@ func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.Secu
     }
     pw.CompressionType = parquet.CompressionCodec_ZSTD
 
-    LogI.Println("Writing findings", CACHEKEY, len(findings))
+    LogI.Println("Writing lacework findings", CACHEKEY, len(findings))
     for _, finding := range findings {
         s, _ := json.MarshalIndent(finding, "", "\t")
-        LogI.Printf("Writing security finding %s", string(s))
+        LogI.Printf("Writing lacework security finding %s", string(s))
         if err := pw.Write(finding); err != nil {
             LogW.Println("Can't write finding", bucket, objectKey, err)
             return err
