@@ -93,20 +93,20 @@ func runMain() {
         telemetry = true
     }
     securityLakeS3Location = os.Getenv("amazon_security_lake_s3_location")
-    if instance == "" {
+    if securityLakeS3Location == "" {
         fmt.Println("Please set the environment variable amazon_security_lake_s3_location")
     }
     securityLakeCacheS3Bucket = os.Getenv("amazon_security_lake_cache_s3_bucket_name")
-    if instance == "" {
+    if securityLakeCacheS3Bucket == "" {
         fmt.Println("Please set the environment variable amazon_security_lake_cache_s3_bucket_name")
     }
     securityLakeRoleArn = os.Getenv("amazon_security_lake_role_arn")
-    if instance == "" {
+    if securityLakeRoleArn == "" {
         fmt.Println("Please set the environment variable amazon_security_lake_role_arn")
         return
     }
     securityLakeRoleExternalId = os.Getenv("amazon_security_lake_role_eid")
-    if instance == "" {
+    if securityLakeRoleExternalId == "" {
         fmt.Println("Please set the environment variable amazon_security_lake_role_eid")
         return
     }
