@@ -39,6 +39,7 @@ CloudFormation is used to set up the Lacework integration with Security Lake. Th
      
 3. Click **Next** through to your stack **Review**.
 4. Accept the AWS CloudFormation terms and click **Create stack**.
+5. Upon successful stack deployment, ensure the Lambda Event Function role ARN is added to the Amazon Security Lake role trust policy. 
 
 ### Troubleshooting
 Troubleshooting this integration can be done by monitoring the CloudWatch logs for two Lambda functions. One Lambda function is responsible for some of the initial setup during the CloudFormation deployment. The second Lambda function transforms Lacework security alerts to the OCSF security findings for Security Lake.
