@@ -185,7 +185,6 @@ func handler(ctx context.Context, e events.SQSEvent) {
                     return
                 }
             }
-        //if len(currFs) > 0 {
         } else {
             writeCacheErr := writeToNewCache(currFs, event.Time)
             if writeCacheErr != nil {
@@ -223,9 +222,7 @@ func cacheExpired(bucket string, t time.Time) (bool, error) {
     }
 
     elapsed := t.Sub(cacheTimeTime)
-    //Speed up cache timeout for unit tests
-    //if elapsed.Minutes() > 5 && aws.Int64Value(head.ContentLength) > 256000000 {
-    if elapsed.Minutes() > 5 {
+    if elapsed.Minutes() > 5 && aws.Int64Value(head.ContentLength) > 256000000 {
         return true, nil
     }
 
@@ -362,7 +359,7 @@ func cacheExists(bucket string) (bool, error) {
     }
 }
 
-func maskExternalID(id string) string {
+func maskSensitiveValue(id string) string {
     if len(id) <= 4 {
         return "****"
     }
@@ -392,15 +389,13 @@ func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.Secu
     }
 
     // Log External ID for Debugging (Masking for Security)
-    LogI.Printf("Retrieved External ID: %s (masked)", maskExternalID(securityLakeRoleExternalId))
-    fmt.Printf("Retrieved External ID: %s (masked)", maskExternalID(securityLakeRoleExternalId))
+    LogI.Printf("Retrieved External ID: %s (masked)", maskSensitiveValue(securityLakeRoleExternalId))
 
     // Create AWS Session
     sess := session.Must(session.NewSession(&aws.Config{
         Region: aws.String(os.Getenv("AWS_REGION")),
     }))
     LogI.Printf("AWS Session created in region: %s", os.Getenv("AWS_REGION"))
-    fmt.Printf("AWS Session created in region: %s", os.Getenv("AWS_REGION"))
 
     // Create STS Client
     stsClient := sts.New(sess)
@@ -412,10 +407,16 @@ func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.Secu
         ExternalId:      aws.String(securityLakeRoleExternalId),
     }
 
+    // Mask the Inputs
+    maskedAssumeRoleInput := &sts.AssumeRoleInput{
+        RoleArn:         aws.String(maskSensitiveValue(securityLakeRoleArn)),
+        RoleSessionName: aws.String(maskSensitiveValue("SecurityLakeSession")),
+        ExternalId:      aws.String(maskSensitiveValue(securityLakeRoleExternalId)),
+    }
+
     // Log AssumeRole Input
-    assumeRoleInputJson, _ := json.MarshalIndent(assumeRoleInput, "", "  ")
-    LogI.Printf("AssumeRole Request: %s", string(assumeRoleInputJson))
-    fmt.Printf("AssumeRole Request: %s", string(assumeRoleInputJson))
+    maskedAssumeRoleInputJson, _ := json.MarshalIndent(maskedAssumeRoleInput , "", "  ")
+    LogI.Printf("AssumeRole Request: %s", string(maskedAssumeRoleInputJson))
 
     // Call AssumeRole
     roleOutput, err := stsClient.AssumeRole(assumeRoleInput)
@@ -428,6 +429,10 @@ func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.Secu
         return fmt.Errorf("failed to assume role: %w", err)
     }
 
+    // Log Successful AssumeRole Response
+    LogI.Printf("Assumed Role Successfully. Temporary Credentials: AccessKeyId=%s, Expiration=%v",
+        maskSensitiveValue(*roleOutput.Credentials.AccessKeyId), *roleOutput.Credentials.Expiration)
+
     // Extract Temporary Credentials
     creds := credentials.NewStaticCredentials(
         *roleOutput.Credentials.AccessKeyId,
@@ -435,18 +440,13 @@ func writeFindingsToAmazonSecurityLake(ctx context.Context, findings []ocsf.Secu
         *roleOutput.Credentials.SessionToken,
     )
 
-    // Log Successful AssumeRole Response
-    LogI.Printf("Assumed Role Successfully. Temporary Credentials: AccessKeyId=%s, Expiration=%v",
-        *roleOutput.Credentials.AccessKeyId, roleOutput.Credentials.Expiration)
-    fmt.Printf("Assumed Role Successfully. Temporary Credentials: AccessKeyId=%s, Expiration=%v",
-        *roleOutput.Credentials.AccessKeyId, roleOutput.Credentials.Expiration)
-
     // create new S3 file writer
     fw, err := s3.NewS3FileWriter(ctx, bucket, objectKey, "bucket-owner-full-control", nil, &aws.Config{Credentials: creds})
     if err != nil {
         LogE.Println("Can't open S3 file for write", bucket, objectKey, err)
         return err
     }
+
     // create new parquet file writer
     pw, err := writer.NewParquetWriter(fw, new(ocsf.SecurityFinding), 4)
     if err != nil {
@@ -984,3 +984,4 @@ func sendApiDeleteRequest(laceworkUrl string, api string, accessToken string, su
 
     return http.DefaultClient.Do(request)
 }
+
