@@ -99,7 +99,7 @@ Resources:
       ServiceToken: !GetAtt "CopyZipsFunction.Arn"
       DestBucket: !Ref "LambdaZipsBucket"
       SourceBucket: "lacework-alliances"
-      Prefix: "lacework-amazon-security-lake-dev"
+      Prefix: "lacework-amazon-security-lake"
       Objects:
         - "/lambda/amazon-security-lake.zip"
 
@@ -206,7 +206,7 @@ Resources:
     Properties:
       Code:
         S3Bucket: !Ref LambdaZipsBucket
-        S3Key: !Join ["", ["lacework-amazon-security-lake-dev", "/lambda/amazon-security-lake.zip"]]
+        S3Key: !Join ["", ["lacework-amazon-security-lake", "/lambda/amazon-security-lake.zip"]]
       Handler: bootstrap
       Runtime: provided.al2023
       Environment:
@@ -217,7 +217,7 @@ Resources:
           lacework_access_key_id: !Ref LaceworkAccessKeyID
           lacework_secret_key: !Ref LaceworkSecretKey
           event_bus_arn: !GetAtt LaceworkAmazonSecurityLakeEventBus.Arn
-          alert_channel_name: !Join [ "-", ["Lacework-Amazon-Security-Lake-dev", !Select [2, !Split [ "/", !Ref "AWS::StackId"]]]]
+          alert_channel_name: !Join [ "-", ["Lacework-Amazon-Security-Lake", !Select [2, !Split [ "/", !Ref "AWS::StackId"]]]]
           amazon_security_lake_cache_s3_bucket_name: !Ref AmazonSecurityLakeCacheS3Bucket
       Role: !GetAtt LaceworkAmazonSecurityLakeSetupFunctionRole.Arn
 
@@ -301,7 +301,7 @@ Resources:
     Properties:
       Code:
         S3Bucket: !Ref LambdaZipsBucket
-        S3Key: !Join ["", ["lacework-amazon-security-lake-dev", "/lambda/amazon-security-lake.zip"]]
+        S3Key: !Join ["", ["lacework-amazon-security-lake", "/lambda/amazon-security-lake.zip"]]
       Handler: bootstrap
       MemorySize: 256
       Timeout: 30
