@@ -86,7 +86,7 @@ func InitMap() map[string][]int {
 	eventMap["CustomerMasterKeyScheduledForDeletion"] = []int{ocsf.CategoryUIDAuditActivity, ocsf.ClassUIDAccountChange}
 	eventMap["SuccessfulConsoleLoginWithoutMFA"] = []int{ocsf.CategoryUIDAuditActivity, ocsf.ClassUIDAuthentication}
 	eventMap["FailedConsoleLogin"] = []int{ocsf.CategoryUIDAuditActivity, ocsf.ClassUIDAuthentication}
-	eventMap["UsageOfRootAccount"] = []int{ocsf.CategoryUIDAuditActivity, ocsf.ClassUIDAuthorization}
+	eventMap["Usage of Root Account"] = []int{ocsf.CategoryUIDAuditActivity, ocsf.ClassUIDAuthorization}
 	eventMap["UnauthorizedAPICall"] = []int{ocsf.CategoryUIDCloudActivity, ocsf.ClassUIDCloudApi}
 	eventMap["ConfigServiceChange"] = []int{ocsf.CategoryUIDCloudActivity, ocsf.ClassUIDCloudApi}
 	eventMap["CloudTrailDefaultAlert"] = []int{ocsf.CategoryUIDCloudActivity, ocsf.ClassUIDCloudApi}
