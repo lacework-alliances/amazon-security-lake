@@ -28,11 +28,13 @@ CloudFormation is used to set up the Lacework integration with Security Lake. Th
    [![Launch](https://user-images.githubusercontent.com/6440106/153987820-e1f32423-1e69-416d-8bca-2ee3a1e85df1.png)](https://console.aws.amazon.com/cloudformation/home?#/stacks/create/review?templateURL=https://lacework-alliances.s3.us-west-2.amazonaws.com/lacework-amazon-security-lake/templates/amazon-security-lake-integration.yml)
 
    For most deployments, you only need the Basic Configuration parameters.
-   ![basic](https://github.com/user-attachments/assets/d3188488-5f54-4046-860d-e82411f4f6c3)
+   ![basic](https://github.com/user-attachments/assets/a7643a48-1d17-4d44-8f98-e65d1a7d8fd1)
    
 2. Specify the following Basic Configuration parameters:
     * Enter a **Stack name** for the stack.
     * Enter the **Security Lake S3 Bucket Name**.
+    * Enter the **Security Lake Role ARN**.
+    * Enter the **Security Lake Role External ID**.
     * Enter **Your Lacework URL**.
     * If you Lacework instance has the Organization feature enabled, enter the **FortiCNAPP Sub-Account Name**. Otherwise, leave this field blank.
     * Enter your **FortiCNAPP Access Key ID** and **FortiCNAPP Secret Key** that you copied from your API Keys file. See [here](https://docs.lacework.com/console/generate-api-access-keys-and-tokens).
