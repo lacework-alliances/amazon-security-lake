@@ -10,8 +10,12 @@ Lacework FortiCNAPP integrates as a data source and provides our real-time secur
 You must have a data lake configured in Amazon Security Lake to use this integration. The integration does not provision the data lake, and the event Lambda will fail when attempting to send Lacework FortiCNAPP events to the custom S3 data source. Please follow the steps described in the following AWS guide to get started:
 * https://docs.aws.amazon.com/security-lake/latest/userguide/getting-started.html
 
-## Architecture
+## How it Works
 ![Security Lake](https://github.com/user-attachments/assets/536cf7f9-6f53-4e9a-9112-6cc4db95f4bb)
+
+Lacework FortiCNAPP security findings are sent to Amazon EventBridge and delivered to Amazon SQS queue. A Lambda function receives these security findings from the queue and then transforms them into OCSF format for delivery to the Amazon Security Lake S3 bucket as Parquet formatted files. The Amazon Security Lake Service ingests these files and the Lacework FortiCNAPP security findings.
+
+This integration uses Amazon S3, Lambda, EventBridge, SQS and Cloudwatch AWS Services. You will incur costs due to the use of the services. Costs will vary depending on the size of the environment and the number of security findings found in the environment.
 
 ## CloudFormation Deployment
 CloudFormation is used to set up the Lacework integration with Security Lake. The CloudFormation template creates the EventBridge rules, IAM permissions, SNS topic, SQS queue, Lambda event transformation function and the Lacework FortiCNAPP outbound security alert channel.
@@ -20,6 +24,21 @@ CloudFormation is used to set up the Lacework integration with Security Lake. Th
 * Subscription to Lacework FortiCNAPP. Acquire through [AWS Marketplace listing](https://aws.amazon.com/marketplace/pp/prodview-uv2dct6bigr54?sr=0-1&ref_=beagle&applicationId=AWSMPContessa).
 * Administrator access to a Lacework FortiCNAPP instance
 * [FortiCNAPP Admin API Key and Secret](https://docs.lacework.com/api/api-access-keys-and-tokens)
+  
+
+### Create the Amazon Security Lake Custom Source for Lacework FortiCNAPP Security Findings
+Do the following:
+
+1. Open the Security Lake console at https://console.aws.amazon.com/securitylake/.
+2. Select the region where you want to create the custom source, in the upper-right corner of the page.
+3. Choose Custom sources in the navigation pane, and then choose Create custom source.
+4. In the Custom source details section, enter **"lacework"** for your custom source name. Then, select the **Security Finding OCSF** event class.
+5. Enter the AWS account ID from which the Lacework FortiCNAPP Amazon Security Lake Alert Channel will be deployed. This account will write logs and events to the data lake.
+6. For the AWS account with permissions to write logs and events to the data lake using the Lacework FortiCNAPP Amazon Security Lake Alert Channel, enter the AWS account ID and External ID. The External ID is a random alphanumeric identifier that is used to prevent unauthorized access to your AWS resources.
+7. For Service Access, create a new IAM role or use an existing IAM role that gives Security Lake permission to invoke the AWS Glue crawler.
+8. Choose Create.
+9. After the custom source is created, take note of the Amazon Security Lake S3 location.
+
 
 ### Deploy the CloudFormation Template
 
@@ -41,35 +60,67 @@ CloudFormation is used to set up the Lacework integration with Security Lake. Th
      
 3. Click **Next** through to your stack **Review**.
 4. Accept the AWS CloudFormation terms and click **Create stack**.
-5. Upon successful stack deployment, ensure the Lambda Event Function role ARN is added to the Amazon Security Lake role trust policy. 
+5. Upon successful stack deployment, ensure the Lambda Event Function role ARN is added to the Amazon Security Lake role trust policy.
+If it has not been automatically added, use the following procedure to configure it:
+
+   **a**. In the AWS console, navigate to **Lambda** and click the Lambda function with the name stack-name-
+   LaceworkAmazonSecurityLakeEventFunction-xxxx. Copy the ARN.
+
+   **b**. In **IAM > Roles**, click the role that was created for your security lake configuration. Click **Trust relationships** >
+   **Edit trust policy**.
+
+   **c**. Add the event function ARN in the following format:
+
+ ```
+   {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::123456789101:root",
+                    "arn:aws:iam::123456789101:role/lw-seclake-LaceworkAmazonSecurityLakeEventFunctionR-aBcDeFg"
+                ]
+            },
+            "Action": "sts:AssumeRole",
+            "Condition": {
+                "StringEquals": {
+                    "sts:ExternalId": "<external id>"
+                }
+            }
+        }
+    ]
+}
+```
 
 ### Troubleshooting
 Troubleshooting this integration can be done by monitoring the CloudWatch logs for two Lambda functions. One Lambda function is responsible for some of the initial setup during the CloudFormation deployment. The second Lambda function transforms Lacework security alerts to the OCSF security findings for Security Lake.
 
 #### Initial Setup Troubleshooting
-Some initial set up during the CloudFormation deployment is handled by a Lambda function _stack-name_-LaceworkAmazonSecurityLakeSetupFunction-_xxxx_. Specifically, it configures the Alert Channel and Alert Rules that are required to send Lacework Security Alerts to the second Lambda function for transformation into OCSF and Amazon Security Lake.
+Some initial set up during the CloudFormation deployment is handled by a Lambda function **_stack-name_-LaceworkAmazonSecurityLakeSetupFunction-_xxxx_**. Specifically, it configures the Alert Channel and Alert Rules that are required to send Lacework Security Alerts to the second Lambda function for transformation into OCSF and Amazon Security Lake.
 To investigate any issues, use the following steps:
 
 1. Go to Lambda in your AWS management console.
-2. Find the Lambda function with the name _stack-name_-LaceworkAmazonSecurityLakeSetupFunction-_xxxx_.
+2. Find the Lambda function with the name **_stack-name_-LaceworkAmazonSecurityLakeSetupFunction-_xxxx_**.
 3. Click the **Monitor** tab.
 4. Click the button **View logs in CloudWatch** to launch CloudWatch into a new tab.
 5. View the **Log stream** debug for errors.
 
-![CloudWatch](https://github.com/user-attachments/assets/3fc7163a-eb9a-48cb-b64d-1ad449df0467)
+![setup-func](https://github.com/user-attachments/assets/86a98d1f-ad37-4f40-8e57-164cbfd03f1f)
 
 
 #### Security Findings Event Troubleshooting
-If there are issues with Lacework FortiCNAPP Security Alerts being transformed to OCSF and Amazon Security Lake, investigate the Lambda function _stack-name_-LaceworkAmazonSecurityLakeEventFunction-_xxxx_. It transforms Lacework Security alerts into OCSF Security Findings format and delivers these in Parquet file format to the Security Lake S3 bucket.
+If there are issues with Lacework FortiCNAPP Security Alerts being transformed to OCSF and Amazon Security Lake, investigate the Lambda function **_stack-name_-LaceworkAmazonSecurityLakeEventFunction-_xxxx_**. It transforms Lacework Security alerts into OCSF Security Findings format and delivers these in Parquet file format to the Security Lake S3 bucket.
 To investigate any issues, use the following steps:
 
 1. Go to Lambda in your AWS management console.
-2. Find the Lambda function with the name _stack-name_-LaceworkAmazonSecurityLakeEventFunction-_xxxx_.
+2. Find the Lambda function with the name **_stack-name_-LaceworkAmazonSecurityLakeEventFunction-_xxxx_**.
 3. Click the **Monitor** tab.
 4. Click the button **View logs in CloudWatch** to launch CloudWatch into a new tab.
 5. View the **Log stream** debug for errors.
 
-![CloudWatch Logs](https://github.com/user-attachments/assets/82d05a19-541d-4883-8edd-c90380761e8f)
+![seclake-cw-log](https://github.com/user-attachments/assets/2e783783-b0e8-4143-a348-5eba836c7817)
 
 ### Updates
 Updates to the integration are provided through CloudFormation template updates. This may upgrade architecture and the Lambda functions.
