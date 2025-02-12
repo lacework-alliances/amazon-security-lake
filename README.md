@@ -1,9 +1,9 @@
-# Amazon Security Lake
+# Lacework FortiCNAPP Amazon Security Lake Integration
 ![Fortinet-logo-rgb-black-red](https://github.com/user-attachments/assets/99c6a147-2abf-4a32-bf43-a565ca839754)
 
 
 ## Overview
-FortiCNAPP from Fortinet (formerly Lacework) can integrate with Amazon Security Lake, an S3 data data lake that is based on the [OCSF standard](https://schema.ocsf.io/).
+Lacework FortiCNAPP can integrate with Amazon Security Lake, an S3 data data lake that is based on the [OCSF standard](https://schema.ocsf.io/).
 FortiCNAPP integrates as a data source and provides our real-time security findings. These security findings include software and infrastructure-as-code (IaC) vulnerabilities, cloud resource security misconfigurations, and known and unknown security threat behaviors.
 
 ## NOTE:
