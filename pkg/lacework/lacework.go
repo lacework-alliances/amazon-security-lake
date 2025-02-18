@@ -188,7 +188,7 @@ type User struct {
 }
 
 type Container struct {
-	HASEXTERNALCONNS int    `json:"HAS_EXTERNAL_CONNS"`
+	HASEXTERNALCONNS bool   `json:"HAS_EXTERNAL_CONNS"`
 	IMAGETAG         string `json:"IMAGE_TAG"`
 	ISSERVER         int    `json:"IS_SERVER"`
 	CLUSTERNAME      string `json:"CLUSTER_NAME"`
