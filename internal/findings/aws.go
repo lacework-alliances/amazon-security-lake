@@ -34,7 +34,7 @@ func (a Aws) enrich(finding ocsf.SecurityFinding, data lacework.Data) {
 
 	switch data.EventType {
 	case "UserUsedServiceInRegion", "ServiceAccessedInRegion", "NewService", "NewCustomerMasterKey", "CustomerMasterKeyScheduledForDeletion",
-		"UsageOfRootAccount", "FailedConsoleLogin", "CloudTrailDefaultAlert":
+		"UsageOfRootAccount", "FailedConsoleLogin", "CLoudTrailDefaultAlert":
 		if len(data.EntityMap.CtUser[0].Username) > 64 {
 			id = data.EntityMap.CtUser[0].Username[:64]
 		} else {
