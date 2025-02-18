@@ -7,13 +7,12 @@ func InitMap() map[string][]int {
 	// map[EVENT_TYPE][CATEGORY,CLASS]
 	var eventMap = map[string][]int{}
 
-	eventMap["PotentiallyCompromisedAwsCredentials"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDDetectionFinding}
-	eventMap["PotentiallyCompromisedHost"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDDetectionFinding}
-	eventMap["PotentiallyCompromisedAzure"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDDetectionFinding}
-	eventMap["PotentiallyCompromisedGCP"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDDetectionFinding}
-	eventMap["PotentiallyCompromisedK8s"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDDetectionFinding}
-	eventMap["PotentialPenetrationTest"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDDetectionFinding}
-
+	eventMap["PotentiallyCompromisedAwsCredentials"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
+	eventMap["PotentiallyCompromisedHost"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
+	eventMap["PotentiallyCompromisedAzure"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
+	eventMap["PotentiallyCompromisedGCP"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
+	eventMap["PotentiallyCompromisedK8s"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
+	eventMap["PotentialPenetrationTest"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
 
 	eventMap["NewExternalServerDns"] = []int{ocsf.CategoryUIDNetworkActivity, ocsf.ClassUIDDnsActivity}
 	eventMap["NewExternalServerIp"] = []int{ocsf.CategoryUIDNetworkActivity, ocsf.ClassUIDNetworkActivity}
@@ -99,8 +98,8 @@ func InitMap() map[string][]int {
 	eventMap["ConfigServiceChange"] = []int{ocsf.CategoryUIDCloudActivity, ocsf.ClassUIDCloudApi}
 	eventMap["CloudTrailDefaultAlert"] = []int{ocsf.CategoryUIDCloudActivity, ocsf.ClassUIDCloudApi}
 
-	eventMap["ComplianceChanged"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDComplianceFinding}
-	eventMap["NewViolations"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDComplianceFinding}
+	eventMap["ComplianceChanged"] = []int{ocsf.CategoryUIDCloudActivity, ocsf.ClassUIDCloudApi}
+	eventMap["NewViolations"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
 
 	eventMap["SuspiciousApplicationLaunched"] = []int{ocsf.CategoryUIDSystemActivity, ocsf.ClassUIDProcessActivity}
 	eventMap["SuspiciousUserLoginMultiGEOs"] = []int{ocsf.CategoryUIDAuditActivity, ocsf.ClassUIDAuthentication}
@@ -110,16 +109,16 @@ func InitMap() map[string][]int {
 	eventMap["NewFile"] = []int{ocsf.CategoryUIDSystemActivity, ocsf.ClassUIDFileSystemActivity}
 	eventMap["SuspiciousFile"] = []int{ocsf.CategoryUIDSystemActivity, ocsf.ClassUIDFileSystemActivity}
 
-	eventMap["NewCveDiscovered"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDVulnerabilityFinding}
-	eventMap["ExistingCveNewInDatacenter"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDVulnerabilityFinding}
-	eventMap["ExistingCveNewInRepo"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDVulnerabilityFinding}
-	eventMap["ExistingCveSeverityEscalated"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDVulnerabilityFinding}
-	eventMap["ExistingCveFixAvailable"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDVulnerabilityFinding}
+	eventMap["NewCveDiscovered"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
+	eventMap["ExistingCveNewInDatacenter"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
+	eventMap["ExistingCveNewInRepo"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
+	eventMap["ExistingCveSeverityEscalated"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
+	eventMap["ExistingCveFixAvailable"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
 
-	eventMap["NewHostCveDiscovered"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDVulnerabilityFinding}
-	eventMap["KnownHostCveDiscovered"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDVulnerabilityFinding}
-	eventMap["ExistingHostCveSeverityEscalated"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDVulnerabilityFinding}
-	eventMap["ExistingHostCveFixAvailable"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDVulnerabilityFinding}
+	eventMap["NewHostCveDiscovered"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
+	eventMap["KnownHostCveDiscovered"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
+	eventMap["ExistingHostCveSeverityEscalated"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
+	eventMap["ExistingHostCveFixAvailable"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
 
 	eventMap["PolicyAssignmentCreated"] = []int{ocsf.CategoryUIDAuditActivity, ocsf.ClassUIDAuthorization}
 	eventMap["NetworkSecurityGroupCreatedOrUpdated"] = []int{ocsf.CategoryUIDNetworkActivity, ocsf.ClassUIDNetworkActivity}
