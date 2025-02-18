@@ -7,7 +7,7 @@ func InitMap() map[string][]int {
 	// map[EVENT_TYPE][CATEGORY,CLASS]
 	var eventMap = map[string][]int{}
 
-	eventMap["PotentiallyCompromisedAwsCredentials"] = []int{ocsf.CategoryUIDAuditActivity, ocsf.ClassUIDSecurityFinding}
+	eventMap["PotentiallyCompromisedAwsCredentials"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
 	eventMap["PotentiallyCompromisedHost"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
 	eventMap["PotentiallyCompromisedAzure"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
 	eventMap["PotentiallyCompromisedGCP"] = []int{ocsf.CategoryUIDFindings, ocsf.ClassUIDSecurityFinding}
