@@ -79,8 +79,8 @@ If it has not been automatically added, use the following procedure to configure
             "Effect": "Allow",
             "Principal": {
                 "AWS": [
-                    "arn:aws:iam::123456789101:root",
-                    "arn:aws:iam::123456789101:role/lw-seclake-LaceworkAmazonSecurityLakeEventFunctionR-aBcDeFg"
+                    "arn:aws:iam::111122223333:root",
+                    "arn:aws:iam::444455556666:role/lw-seclake-LaceworkAmazonSecurityLakeEventFunctionR-aBcDeFg"
                 ]
             },
             "Action": "sts:AssumeRole",
